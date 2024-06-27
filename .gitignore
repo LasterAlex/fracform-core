@@ -1,2 +1,6 @@
 /target
 output.bmp
+/formula_project
+perf.data
+perf.data.old
+flamegraph.svg

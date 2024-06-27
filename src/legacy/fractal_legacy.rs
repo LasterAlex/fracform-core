@@ -41,6 +41,16 @@ pub struct Fractal {
     fractal_type: FractalType,
 }
 
+fn max_of_tuple(t: (u32, u32, u32)) -> u32 {
+    let (a, b, c) = t;
+    a.max(b).max(c)
+}
+
+fn min_of_tuple(t: (u32, u32, u32)) -> u32 {
+    let (a, b, c) = t;
+    a.min(b).min(c)
+}
+
 pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     -((y1 - y2) * x + (x1 * y2 - x2 * y1)) / (x2 - x1)
 }
@@ -183,7 +193,7 @@ impl Fractal {
         if z == Complex::new(0.0, 0.0) {
             return c;
         }
-        z * z + c + z / c * c * c + z / c
+        z * z + c
     }
 
     pub fn make_fractal(&self) -> Vec<Vec<(u8, u8, u8, u8)>> {
@@ -393,16 +403,19 @@ impl Fractal {
                 for y in 0..self.height {
                     let r = (hits_to_col_sqrt(
                         buddha_bitmap[(x * self.width + y) as usize].0 as u32,
+                        // 10000,
                         (max.0) as u32,
                         min_pix,
                     ) as f64) as u8; //1.1
                     let g = (hits_to_col_sqrt(
                         buddha_bitmap[(x * self.width + y) as usize].1 as u32,
+                        // 10000,
                         (max.1) as u32,
                         min_pix,
                     ) as f64) as u8; //0.8
                     let b = (hits_to_col_sqrt(
                         buddha_bitmap[(x * self.width + y) as usize].2 as u32,
+                        // 10000,
                         (max.2) as u32,
                         min_pix,
                     ) as f64) as u8; //0.6
