@@ -42,16 +42,16 @@ I have adored fractals for a very long time, and this is the first actually good
 2) Palettes are not yet very refined, but i very much plan on changing it! These are the current ones:
 
 ##### Rainbow palette:
-![rainbow palette](https://github.com/LasterAlex/fracform-core/blob/main/fractal_examples/rainbow_palette.png?raw=true)
+![rainbow palette](https://github.com/LasterAlex/fracform-core/blob/master/fractal_examples/rainbow_palette.png?raw=true)
 
 ##### Smooth palette:
-![smooth palette](https://github.com/LasterAlex/fracform-core/blob/main/fractal_examples/smooth_palette.png?raw=true)
+![smooth palette](https://github.com/LasterAlex/fracform-core/blob/master/fractal_examples/smooth_palette.png?raw=true)
 
 ##### Brown and blue palette:
-![brown and blue palette](https://github.com/LasterAlex/fracform-core/blob/main/fractal_examples/brown_and_blue_palette.png?raw=true)
+![brown and blue palette](https://github.com/LasterAlex/fracform-core/blob/master/fractal_examples/brown_and_blue_palette.png?raw=true)
 
 ##### Naive palette (shift = 300):
-![naive palette with shift 300](https://github.com/LasterAlex/fracform-core/blob/main/fractal_examples/naive_palette.png?raw=true)
+![naive palette with shift 300](https://github.com/LasterAlex/fracform-core/blob/master/fractal_examples/naive_palette.png?raw=true)
 
 ### Todo list:
 - [x] Add mandelbrot and julia generation
