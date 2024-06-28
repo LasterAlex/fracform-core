@@ -1,18 +1,24 @@
-use std::{thread, time::Instant};
+use std::{collections::HashMap, fs, path::Path, process::exit, thread, time::Instant};
 
 use colors::PaletteMode;
-use config::{JOBS, STACK_SIZE};
+use config::{ANIMATIONS_DIR, FRACTALS_DIR, GENERATED_DIR, JOBS, STACK_SIZE};
 use formula::{compile_formula_project, create_formula_project, load_library};
 use fractals::{f, Fractal};
 use image::{ImageBuffer, Rgb};
 use num::Complex;
+use rand::distributions::{Alphanumeric, DistString};
+use strfmt::Format; // 0.8
 
 pub mod colors;
 pub mod config;
 pub mod formula;
 pub mod fractals;
 
-fn save_bitmap(bitmap: &Vec<Vec<(u8, u8, u8)>>, name: &str) {
+fn sanitize_filename(name: String) -> String {
+    name.replace(" ", "").replace("/", "÷").replace("*", "×")
+}
+
+fn save_bitmap(bitmap: &Vec<Vec<(u8, u8, u8)>>, name: &Path) {
     let mut image_buffer =
         ImageBuffer::<Rgb<u8>, Vec<u8>>::new(bitmap.len() as u32, bitmap[0].len() as u32);
 
@@ -33,19 +39,27 @@ fn make_animation() {
     let zoom = 0.7;
     let iterations = 1000;
     let palette_mode = PaletteMode::Rainbow { offset: Some(205) };
+    let formula = "z * c - z.powf({factor:.2}) + c";
 
     // Animation parameters
     let start_factor = 10.0;
     let end_factor = 0.0;
     let frame_count = 2000;
-    let animation_foulder =
-        "/home/laster/Programming/RustProjects/fracform-core/generated/animations/new_animation/";
+    let starting_frame = 1246;
+    let animation_directory_name = sanitize_filename(
+        formula
+            .format(&HashMap::from([("factor".to_string(), start_factor)]))
+            .unwrap(),
+    );
+    let generated_path = Path::new(GENERATED_DIR);
+    let animations_path = generated_path.join(Path::new(ANIMATIONS_DIR));
+    let current_animation_directory = animations_path.join(animation_directory_name);
 
     // Animation generation
     let mut factor;
     let mut fractal;
     let start = Instant::now();
-    for frame in 0..frame_count {
+    for frame in starting_frame..frame_count {
         println!("{:.2?}%", frame as f64 / frame_count as f64 * 100.0);
         factor = f(
             frame as f64,
@@ -54,10 +68,16 @@ fn make_animation() {
             frame_count as f64,
             end_factor as f64,
         );
-        let formula = format!("z * c - z.powf({:.4?}) + c", factor);
-        create_formula_project(&formula).expect("Failed to generate Rust code");
+        create_formula_project(
+            formula
+                .format(&HashMap::from([("factor".to_string(), factor)]))
+                .unwrap()
+                .as_str(),
+        )
+        .expect("Failed to generate Rust code");
         compile_formula_project().expect("Failed to compile Rust code");
         load_library();
+
         fractal = Fractal::new(
             width,
             height,
@@ -69,18 +89,18 @@ fn make_animation() {
             palette_mode.clone(),
         );
         let bitmap = fractal.clone().mandelbrot();
+
         let color_bitmap = fractal.make_color_from_bitmap(bitmap);
-        save_bitmap(
-            &color_bitmap,
-            &format!("{}{}_mandelbrot_animated.png", animation_foulder, frame),
-        );
+        let file = current_animation_directory.join(format!("{}_fractal_animated.png", frame));
+        save_bitmap(&color_bitmap, file.as_path());
     }
     println!("Animation took {:.2?}", start.elapsed());
 }
 
 fn run() {
     let start = Instant::now();
-    if create_formula_project("z * c - z.powf(5.0) + c").expect("Failed to generate Rust code") {
+    let formula = "z * c - z.powf(5.0) + c";
+    if create_formula_project(&formula).expect("Failed to generate Rust code") {
         compile_formula_project().expect("Failed to compile Rust code");
     }
     load_library();
@@ -105,24 +125,21 @@ fn run() {
 
     let mandelbrot = fractal.clone().mandelbrot();
     let color_bitmap = fractal.make_color_from_bitmap(mandelbrot);
-    save_bitmap(&color_bitmap, "output.png");
 
-    // let fractal = Fractal::new(
-    //     1000,
-    //     1000,
-    //     0.5,
-    //     Complex::new(0.0, 0.0),
-    //     5000,
-    //     40.0,
-    //     Some(Complex::new(0.8, 0.44)),
-    // );
-    //
-    // let julia = fractal.clone().julia();
-    // let color_bitmap = fractal.make_color_from_bitmap(julia);
-    // save_bitmap(&color_bitmap);
+    let generated_path = Path::new(GENERATED_DIR);
+    let fractals_path = generated_path.join(Path::new(FRACTALS_DIR));
+    let sanitized_formula = sanitize_filename(formula.to_string());
+    let rand_string = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+    let filename = format!("{}_{}.png", sanitized_formula, rand_string,);
+    save_bitmap(&color_bitmap, &fractals_path.join(filename).as_path());
 }
 
 fn main() {
+    let generated_path = Path::new(GENERATED_DIR);
+    let animations_path = generated_path.join(Path::new(ANIMATIONS_DIR));
+    let fractals_path = generated_path.join(Path::new(FRACTALS_DIR));
+    fs::create_dir_all(animations_path).unwrap();
+    fs::create_dir_all(fractals_path).unwrap();
     let child = thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(make_animation)

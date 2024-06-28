@@ -168,7 +168,7 @@ pub fn set_color(iters: u32, max_iterations: u32, palette_mode: PaletteMode) -> 
             iters_to_color(iters, max_iterations, offset.unwrap_or(0))
         }
         PaletteMode::Smooth { shift, offset } => {
-            let n = (iters + offset.unwrap_or(0)) as f64/ shift.unwrap_or(max_iterations) as f64;
+            let n = (iters + offset.unwrap_or(0)) as f64 / shift.unwrap_or(max_iterations) as f64;
             let t = 1.0 - (n - n.trunc());
             let r = min(255, (9.0 * (1.0 - t) * t.powi(3) * 255.0).round() as u8);
             let g = min(
