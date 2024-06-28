@@ -12,6 +12,7 @@ fn z_escaped(z: Complex<f64>, max_abs: u32) -> bool {
 impl Fractal {
     pub fn mandelbrot_worker(&self, chunk: &mut [u32], tasks: Vec<(i32, i32)>) {
         for (index, (x, y)) in tasks.iter().enumerate() {
+            // https://en.wikipedia.org/wiki/Mandelbrot_set#Formal_definition
             let c = self.pix_to_coord(*x, *y);
             let mut z = Complex::new(0.0, 0.0);
             let mut i = 0;
@@ -25,6 +26,7 @@ impl Fractal {
 
     pub fn julia_worker(&self, chunk: &mut [u32], tasks: Vec<(i32, i32)>) {
         for (index, (x, y)) in tasks.iter().enumerate() {
+            // https://en.wikipedia.org/wiki/Julia_set#Formal_definition
             let mut z = self.pix_to_coord(*x, *y);
             let c = self.c.unwrap_or(Complex::new(0.0, 0.0));
             let mut i = 0;
@@ -37,8 +39,10 @@ impl Fractal {
     }
 
     pub fn mandelbrot_or_julia(self, fractal_type: FractalType) -> Bitmap {
-        let mut bitmap = [0; MAX_PIXELS as usize];
+        // To not write the same code twice
+        let mut bitmap = [0; MAX_PIXELS as usize]; // Vecs are A LOT slower, cuz heap
         let mut pixels = vec![];
+        // Generate all the tasks in the right order beforehand
         for y in 0..self.height {
             for x in 0..self.width {
                 pixels.push((x, y));
@@ -60,18 +64,21 @@ impl Fractal {
             chunk_size = (self.width * self.height / JOBS as i32) as usize;
         }
         bitmap
-            .par_chunks_mut(chunk_size)
+            .par_chunks_mut(chunk_size) // Super handy, thx rayon
             .enumerate()
             .for_each(|(index, chunk)| {
                 let current_bitmap_index = (index * chunk_size) as i32;
                 let next_bitmap_index = ((index + 1) * chunk_size) as i32;
-                let tasks = pixels
+                let tasks = pixels // Potential improvement: make every worker work on spread out
+                    // tasks, cuz fractals are often not uniform, some workers can finish before
+                    // others, who work on harder parts of the fractal
                     .iter()
                     .skip(current_bitmap_index as usize)
                     .take(next_bitmap_index as usize - current_bitmap_index as usize)
                     .map(|(x, y)| (*x, *y))
                     .collect::<Vec<(i32, i32)>>();
-                if tasks.is_empty() {
+                if tasks.is_empty() { // The bitmap is more than the tasks, so we can't just trust
+                    // that it will end by par_chunks_mut
                     return;
                 }
 

@@ -25,8 +25,7 @@ pub enum PaletteMode {
 pub fn naive_color(iterations: u32, max_iterations: u32, shift: u32, offset: u32) -> (u8, u8, u8) {
     let t = ((iterations + offset) as f64) / shift as f64;
 
-    // Generate a smooth gradient (example using HSL to RGB conversion)
-    // Adjust the parameters to get different color schemes
+    // Generate a smooth gradient
     let hue = 360.0 * t;
     let saturation = 1.0;
     let lightness = f(
@@ -41,7 +40,6 @@ pub fn naive_color(iterations: u32, max_iterations: u32, shift: u32, offset: u32
     hsl_to_rgb(hsl_color)
 }
 
-// Function to convert HSL to RGB
 fn hsl_to_rgb(hsl_color: ColorHSV) -> (u8, u8, u8) {
     let c = (1.0 - (2.0 * hsl_color.lightness - 1.0).abs()) * hsl_color.saturation;
     let x = c * (1.0 - ((hsl_color.hue / 60.0) % 2.0 - 1.0).abs());
@@ -79,10 +77,11 @@ impl ColorHSV {
 }
 
 fn create_palette(lst_of_colors_hsv: Vec<ColorHSV>, length: usize) -> Vec<(u8, u8, u8)> {
+    // Needs some updating, legacy code
     let mut y = Vec::new();
     let len_segment = length / lst_of_colors_hsv.len();
     let mut lst = lst_of_colors_hsv.clone();
-    lst.pop(); // Remove the last element
+    lst.pop();
 
     for (i, color) in lst.iter().enumerate() {
         for j in 0..len_segment {
@@ -113,6 +112,7 @@ fn create_palette(lst_of_colors_hsv: Vec<ColorHSV>, length: usize) -> Vec<(u8, u
 
 #[cached]
 fn create_custom_pallete() -> Vec<(u8, u8, u8)> {
+    // Needs some updating, legacy code
     create_palette(
         vec![
             ColorHSV::new(342.0, 92.0, 71.0),
@@ -128,6 +128,7 @@ fn create_custom_pallete() -> Vec<(u8, u8, u8)> {
 
 fn iters_to_color(iters: u32, max_iterations: u32, offset: u32) -> (u8, u8, u8) {
     let iters = max_iterations - iters;
+    // It came to me in a dream
     let value = (iters << 21) + (iters << 10) + iters * 8 + offset;
     let red = ((value >> 16) & 0xFF) as u8;
     let green = ((value >> 8) & 0xFF) as u8;

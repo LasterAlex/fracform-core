@@ -6,8 +6,7 @@ use std::path::Path;
 use std::process::Command;
 
 pub fn create_formula_project(user_function: &str) -> std::io::Result<bool> {
-    // The bool is for "is it
-    // already present"
+    // The bool is for "is it already present"
     let project_dir = Path::new("formula_project");
     let src_dir = project_dir.join("src");
 
@@ -47,7 +46,7 @@ pub fn create_formula_project(user_function: &str) -> std::io::Result<bool> {
     let mut cargo_toml = File::create(project_dir.join("Cargo.toml"))?;
     cargo_toml.write_all(cargo_toml_content.as_bytes())?;
 
-    // Generate main.rs with the user function
+    // Generate lib.rs with the user function
     let mut main_rs = File::create(src_dir.join("lib.rs"))?;
     main_rs.write_all(main_rs_content.as_bytes())?;
 
@@ -56,7 +55,7 @@ pub fn create_formula_project(user_function: &str) -> std::io::Result<bool> {
 
 pub fn compile_formula_project() -> std::io::Result<()> {
     let output = Command::new("cargo")
-        .env("RUSTFLAGS", "-Ctarget-cpu=native")
+        .env("RUSTFLAGS", "-Ctarget-cpu=native")  // It will always be compiled, so, like, obv
         .args(&["build", "--release"])
         .current_dir("formula_project")
         .output()?;
@@ -84,10 +83,13 @@ static mut FUNC: Option<unsafe extern "C" fn(Complex<f64>, Complex<f64>) -> Comp
 
 pub fn load_library() {
     unsafe {
+        // Otherwise when the animations start, the library will be loaded one, and then it will
+        // reuse the same file, not updating it
         if let Some(lib) = LIB.take() {
             lib.close().unwrap();
         }
         LIB = Some(Library::new(LIB_PATH).expect("Failed to load library"));
+        // Just some fuckery to get the function we need
         let func: unsafe extern "C" fn(Complex<f64>, Complex<f64>) -> Complex<f64> = *LIB
             .as_ref()
             .unwrap()

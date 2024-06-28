@@ -1,9 +1,15 @@
-use std::{collections::HashMap, fs, path::Path, process::exit, thread, time::Instant};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+    thread,
+    time::Instant,
+};
 
 use colors::PaletteMode;
-use config::{ANIMATIONS_DIR, FRACTALS_DIR, GENERATED_DIR, JOBS, STACK_SIZE};
+use config::{ANIMATIONS_DIR, FRACTALS_DIR, GENERATED_DIR, STACK_SIZE};
 use formula::{compile_formula_project, create_formula_project, load_library};
-use fractals::{f, Fractal};
+use fractals::{f, Fractal, FractalType};
 use image::{ImageBuffer, Rgb};
 use num::Complex;
 use rand::distributions::{Alphanumeric, DistString};
@@ -16,6 +22,14 @@ pub mod fractals;
 
 fn sanitize_filename(name: String) -> String {
     name.replace(" ", "").replace("/", "÷").replace("*", "×")
+}
+
+fn create_file_path(formula: &str) -> PathBuf {
+    let fractals_path = Path::new(GENERATED_DIR).join(Path::new(FRACTALS_DIR));
+    let sanitized_formula = sanitize_filename(formula.to_string());
+    let rand_string = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
+    let filename = format!("{}_{}.png", sanitized_formula, rand_string,);
+    fractals_path.join(filename.clone())
 }
 
 fn save_bitmap(bitmap: &Vec<Vec<(u8, u8, u8)>>, name: &Path) {
@@ -32,6 +46,7 @@ fn save_bitmap(bitmap: &Vec<Vec<(u8, u8, u8)>>, name: &Path) {
     image_buffer.save(name).expect("Failed to save image");
 }
 
+#[allow(dead_code)]
 fn make_animation() {
     // Fractal parameters
     let width = 1000;
@@ -39,13 +54,15 @@ fn make_animation() {
     let zoom = 0.7;
     let iterations = 1000;
     let palette_mode = PaletteMode::Rainbow { offset: Some(205) };
-    let formula = "z * c - z.powf({factor:.2}) + c";
+    let formula = "z * c + z.powf({factor:.2}) + c";
 
     // Animation parameters
-    let start_factor = 10.0;
-    let end_factor = 0.0;
+    let start_factor = 0.0;
+    let end_factor = 10.0;
     let frame_count = 2000;
-    let starting_frame = 1246;
+    let starting_frame = 0;  // If the animation is interrupted, set this to the last frame + 1
+
+    // Animation generation
     let animation_directory_name = sanitize_filename(
         formula
             .format(&HashMap::from([("factor".to_string(), start_factor)]))
@@ -55,11 +72,12 @@ fn make_animation() {
     let animations_path = generated_path.join(Path::new(ANIMATIONS_DIR));
     let current_animation_directory = animations_path.join(animation_directory_name);
 
-    // Animation generation
+    fs::create_dir_all(current_animation_directory.as_path()).unwrap();
+
     let mut factor;
     let mut fractal;
     let start = Instant::now();
-    for frame in starting_frame..frame_count {
+    for frame in starting_frame..=frame_count {
         println!("{:.2?}%", frame as f64 / frame_count as f64 * 100.0);
         factor = f(
             frame as f64,
@@ -97,41 +115,61 @@ fn make_animation() {
     println!("Animation took {:.2?}", start.elapsed());
 }
 
+#[allow(dead_code)]
 fn run() {
+    // Parameters
+    let width = 1000;
+    let height = 1000;
+    let zoom = 0.7;
+    let center_coordinates = Complex::new(-0.5, 0.0);
+    let iterations = 500;
+
+    // let palette_mode = PaletteMode::Rainbow { offset: None };
+    // let palette_mode = PaletteMode::Smooth { shift: None, offset: None };
+    // let palette_mode = PaletteMode::BrownAndBlue;
+    // let palette_mode = PaletteMode::Custom;
+    let palette_mode = PaletteMode::Naive { shift: Some(300), offset: Some(10) };
+
+    // let formula = "z.powc(z - c * z.powf(10.0)) + z.powf(10.0) + c";
+    let formula = "z * z + c";
+    let fractal_type = FractalType::Mandelbrot;
+    let c = Complex::new(0.0, 0.5); // Important only for Julia sets
+    let max_abs = 1000;
+
+    // Code
     let start = Instant::now();
-    let formula = "z * c - z.powf(5.0) + c";
+
+    // This exists to make sure that the library is loaded before the formula is generated
     if create_formula_project(&formula).expect("Failed to generate Rust code") {
         compile_formula_project().expect("Failed to compile Rust code");
     }
     load_library();
     println!("Library loaded in {:.2?}", start.elapsed());
+
     let fractal = Fractal::new(
-        1000,
-        1000,
-        0.7,
-        Complex::new(0.0, 0.0),
-        1000,
-        160,
-        Some(Complex::new(-0.9, 0.27)),
-        // PaletteMode::Smooth { shift: Some(200), offset: Some(66) },
-        // PaletteMode::BrownAndBlue,
-        PaletteMode::Rainbow { offset: Some(205) },
-        // PaletteMode::Custom,
-        // PaletteMode::Naive { shift: Some(100), offset: Some(10) },
+        width,
+        height,
+        zoom,
+        center_coordinates,
+        iterations,
+        max_abs, // Not very important unless you know what you are doing
+        Some(c),
+        palette_mode,
     );
-    unsafe {
-        JOBS = 128;
-    }
 
-    let mandelbrot = fractal.clone().mandelbrot();
-    let color_bitmap = fractal.make_color_from_bitmap(mandelbrot);
+    let fractal_bitmap = match fractal_type {
+        FractalType::Mandelbrot => fractal.clone().mandelbrot(),
+        FractalType::Julia => fractal.clone().julia(),
+        _ => todo!("Add the rest of the types"),
+    };
+    let color_bitmap = fractal.make_color_from_bitmap(fractal_bitmap);
 
-    let generated_path = Path::new(GENERATED_DIR);
-    let fractals_path = generated_path.join(Path::new(FRACTALS_DIR));
-    let sanitized_formula = sanitize_filename(formula.to_string());
-    let rand_string = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
-    let filename = format!("{}_{}.png", sanitized_formula, rand_string,);
-    save_bitmap(&color_bitmap, &fractals_path.join(filename).as_path());
+    let path = create_file_path(formula);
+    save_bitmap(
+        &color_bitmap,
+        &path.as_path()
+    );
+    println!("Saved with name: {}", path.as_path().display());
 }
 
 fn main() {
@@ -142,7 +180,7 @@ fn main() {
     fs::create_dir_all(fractals_path).unwrap();
     let child = thread::Builder::new()
         .stack_size(STACK_SIZE)
-        .spawn(make_animation)
+        .spawn(run)
         .unwrap();
 
     // Wait for thread to join

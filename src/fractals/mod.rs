@@ -21,10 +21,11 @@ pub enum FractalType {
 }
 
 pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    // Linear interpolation, very useful for a lot of things
     ((y1 - y2) * x + (x1 * y2 - x2 * y1)) / (x1 - x2)
 }
 
-#[cached(
+#[cached(  // Speeds up the process A LOT
     ty = "UnboundCache<i32, f64>",
     create = "{ UnboundCache::new() }",
     convert = r#"{ x }"#
@@ -55,6 +56,7 @@ fn y_to_coord(y: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
 }
 
 pub fn hits_to_col_sqrt(val: u32, max: u32, min: u32) -> u8 {
+    // Buddhabrot code
     //3rd root gives better results
     (((val - min) as f64 / max as f64).powf(1. / 1.7) * 255.) as u8
 }
