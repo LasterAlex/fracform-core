@@ -1,7 +1,5 @@
-use num::Complex;
-use std::sync::Once;
-
 use libloading::Library;
+use num::Complex;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
@@ -58,7 +56,7 @@ pub fn create_formula_project(user_function: &str) -> std::io::Result<bool> {
 
 pub fn compile_formula_project() -> std::io::Result<()> {
     let output = Command::new("cargo")
-        .env("RUSTFLAGS", "-Ctarget-cpu=native -Clink-arg=-fuse-ld=lld")
+        .env("RUSTFLAGS", "-Ctarget-cpu=native")
         .args(&["build", "--release"])
         .current_dir("formula_project")
         .output()?;
@@ -81,23 +79,24 @@ const LIB_PATH: &str = "formula_project/target/release/formula_project.dll";
 #[cfg(target_os = "macos")]
 const LIB_PATH: &str = "formula_project/target/release/libformula_project.dylib";
 
-static INIT: Once = Once::new();
 static mut LIB: Option<Library> = None;
 static mut FUNC: Option<unsafe extern "C" fn(Complex<f64>, Complex<f64>) -> Complex<f64>> = None;
 
 pub fn load_library() {
     unsafe {
-        INIT.call_once(|| {
-            LIB = Some(Library::new(LIB_PATH).expect("Failed to load library"));
-            let func: unsafe extern "C" fn(Complex<f64>, Complex<f64>) -> Complex<f64> = *LIB
-                .as_ref()
-                .unwrap()
-                .get::<unsafe extern "C" fn(Complex<f64>, Complex<f64>) -> Complex<f64>>(
-                    b"user_function",
-                )
-                .expect("Failed to find function in library");
-            FUNC = Some(func);
-        });
+        if let Some(lib) = LIB.take() {
+            lib.close().unwrap();
+        }
+        LIB = Some(Library::new(LIB_PATH).expect("Failed to load library"));
+        let func: unsafe extern "C" fn(Complex<f64>, Complex<f64>) -> Complex<f64> = *LIB
+            .as_ref()
+            .unwrap()
+            .get::<unsafe extern "C" fn(Complex<f64>, Complex<f64>) -> Complex<f64>>(
+                b"user_function",
+            )
+            .expect("Failed to find function in library")
+            .clone();
+        FUNC = Some(func);
     }
 }
 

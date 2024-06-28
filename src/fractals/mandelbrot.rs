@@ -46,7 +46,8 @@ impl Fractal {
         }
         let start = Instant::now();
         let chunk_size;
-        unsafe {  // Cuz it's working with mut static JOBS, it's ok
+        unsafe {
+            // Cuz it's working with mut static JOBS, it's ok
             if JOBS == 1 {
                 match fractal_type {
                     FractalType::Mandelbrot => self.mandelbrot_worker(&mut bitmap, pixels),
