@@ -10,6 +10,7 @@ The goal is to make a library that can very efficiently generate
 
 I have adored fractals for a very long time, and this is the first actually good and performant attempt
 
+---
 ### How to use
 
 #### Creation of the regular fractal:
@@ -35,7 +36,8 @@ I have adored fractals for a very long time, and this is the first actually good
 `STACK_SIZE` - the size of the stack. The bigger it is, the bigger `MAX_PIXELS` can get, but also slower startup times spent on allocating that stack
 `*_DIR` - The name of the directories, NOT PATH! The path structure is set in code for consistency
 
-#### Notes:
+---
+### Notes:
 
 1) The first compilation of the project will be slower than the rest, because it will build `formula_project` in the project directory to allow for dynamic formulas
 
@@ -53,6 +55,7 @@ I have adored fractals for a very long time, and this is the first actually good
 ##### Naive palette (shift = 300):
 ![naive palette with shift 300](https://github.com/LasterAlex/fracform-core/blob/master/fractal_examples/naive_palette.png?raw=true)
 
+---
 ### Todo list:
 - [x] Add mandelbrot and julia generation
 - [x] Parallelize the code
