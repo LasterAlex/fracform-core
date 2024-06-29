@@ -1,6 +1,7 @@
+pub mod buddhabrot;
 pub mod mandelbrot;
 use cached::UnboundCache;
-use std::{time::Instant, usize};
+use std::time::Instant;
 
 use cached::proc_macro::cached;
 
@@ -17,7 +18,7 @@ pub type Bitmap = [u32; MAX_PIXELS as usize];
 pub enum FractalType {
     Mandelbrot,
     Julia,
-    Buddhabrot,
+    Buddhabrot { rounds: u32 },
 }
 
 pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
@@ -30,12 +31,22 @@ pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     create = "{ UnboundCache::new() }",
     convert = r#"{ x }"#
 )]
-fn x_to_coord(x: i32, width: i32, shift_x: f64, zoom: f64) -> f64 {
+fn x_to_coord(x: i32, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
+    let end_goal; // We need the center of the fractal to not be distorted, so we go with the
+                  // minimum of the width and height, to preserve all of the fractal in the image
+    let offset; // To center the image
+    if width > height {
+        offset = (width - height) as f64 / 2.0;
+        end_goal = height as f64;
+    } else {
+        offset = 0.0;
+        end_goal = width as f64;
+    }
     f(
-        x as f64,
+        x as f64 - offset,
         0.0,
         -(1.0 / zoom) + shift_x,
-        width as f64,
+        end_goal,
         (1.0 / zoom) + shift_x,
     )
 }
@@ -45,14 +56,61 @@ fn x_to_coord(x: i32, width: i32, shift_x: f64, zoom: f64) -> f64 {
     create = "{ UnboundCache::new() }",
     convert = r#"{ y }"#
 )]
-fn y_to_coord(y: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
+fn y_to_coord(y: i32, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
+    let offset;
+    let end_goal;
+    if height > width {
+        offset = (height - width) as f64 / 2.0;
+        end_goal = width as f64;
+    } else {
+        offset = 0.0;
+        end_goal = height as f64;
+    }
     f(
-        y as f64,
+        y as f64 - offset,
         0.0,
         (1.0 / zoom) + shift_y,
-        height as f64,
+        end_goal,
         -(1.0 / zoom) + shift_y,
     )
+}
+
+fn x_coord_to_pix(x: f64, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
+    let end_goal;
+    let offset;
+    if width > height {
+        offset = (width - height) as f64 / 2.0;
+        end_goal = height as f64;
+    } else {
+        offset = 0.0;
+        end_goal = width as f64;
+    }
+    f(
+        x,
+        -(1.0 / zoom) + shift_x,
+        0.0,
+        (1.0 / zoom) + shift_x,
+        end_goal,
+    ) + offset
+}
+
+fn y_coord_to_pix(y: f64, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
+    let offset;
+    let end_goal;
+    if height > width {
+        offset = (height - width) as f64 / 2.0;
+        end_goal = width as f64;
+    } else {
+        offset = 0.0;
+        end_goal = height as f64;
+    }
+    f(
+        y,
+        (1.0 / zoom) + shift_y,
+        0.0,
+        -(1.0 / zoom) + shift_y,
+        end_goal,
+    ) + offset
 }
 
 pub fn hits_to_col_sqrt(val: u32, max: u32, min: u32) -> u8 {
@@ -109,39 +167,27 @@ impl Fractal {
 
     fn pix_to_coord(&self, x: i32, y: i32) -> Complex<f64> {
         Complex::new(
-            x_to_coord(x, self.width, self.shift.re, self.zoom),
-            y_to_coord(y, self.height, self.shift.im, self.zoom),
+            x_to_coord(x, self.width, self.height, self.shift.re, self.zoom),
+            y_to_coord(y, self.width, self.height, self.shift.im, self.zoom),
         )
     }
 
-    pub fn coord_to_pix(&self, z: Complex<f64>) -> (i32, i32) {
+    pub fn coord_to_pix(&self, z: Complex<f64>) -> (f64, f64) {
         (
-            f(
-                z.re,
-                self.shift.re,
-                (self.width / 2) as f64,
-                (1.0 / self.zoom) + self.shift.re,
-                (self.width / 2 + self.height / 2) as f64,
-            ) as i32,
-            f(
-                z.im,
-                (1.0 / self.zoom) + self.shift.im,
-                0.0,
-                -(1.0 / self.zoom) + self.shift.im,
-                self.height as f64,
-            ) as i32,
+            x_coord_to_pix(z.re, self.width, self.height, self.shift.re, self.zoom),
+            y_coord_to_pix(z.im, self.width, self.height, self.shift.im, self.zoom),
         )
     }
 
     pub fn make_color_from_bitmap(&self, bitmap: Bitmap) -> Vec<Vec<(u8, u8, u8)>> {
         let default_color = (0, 0, 0);
-        let mut color_bitmap = vec![vec![default_color; self.width as usize]; self.height as usize];
+        let mut color_bitmap = vec![vec![default_color; self.height as usize]; self.width as usize];
         let start = Instant::now();
-        for y in 0..self.height as usize {
-            for x in 0..self.width as usize {
-                let i = bitmap[(x * self.width as usize + y) as usize];
+        for x in 0..self.width as usize {
+            for y in 0..self.height as usize {
+                let i = bitmap[(x * self.height as usize + y) as usize];
                 if i < self.iterations {
-                    color_bitmap[y][x] = set_color(i, self.iterations, self.palette_mode.clone());
+                    color_bitmap[x][y] = set_color(i, self.iterations, self.palette_mode.clone());
                 }
             }
         }

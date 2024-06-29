@@ -43,8 +43,8 @@ impl Fractal {
         let mut bitmap = [0; MAX_PIXELS as usize]; // Vecs are A LOT slower, cuz heap
         let mut pixels = vec![];
         // Generate all the tasks in the right order beforehand
-        for y in 0..self.height {
-            for x in 0..self.width {
+        for x in 0..self.width {
+            for y in 0..self.height {
                 pixels.push((x, y));
             }
         }
@@ -54,14 +54,32 @@ impl Fractal {
             // Cuz it's working with mut static JOBS, it's ok
             if JOBS == 1 {
                 match fractal_type {
-                    FractalType::Mandelbrot => self.mandelbrot_worker(&mut bitmap, pixels),
-                    FractalType::Julia => self.julia_worker(&mut bitmap, pixels),
+                    FractalType::Mandelbrot => self.mandelbrot_worker(&mut bitmap, pixels.clone()),
+                    FractalType::Julia => self.julia_worker(&mut bitmap, pixels.clone()),
                     _ => panic!("Invalid fractal type, mandelbrot or julia?"),
                 }
                 println!("Time taken to generate: {:.2?}", start.elapsed());
+                // for x in 0..self.width {
+                //     println!(
+                //         "{:?}",
+                //         bitmap
+                //             .iter()
+                //             .skip((x * self.height) as usize)
+                //             .take(self.height as usize)
+                //             .map(|x| {
+                //                 if *x < self.iterations {
+                //                     "X"
+                //                 } else {
+                //                     " "
+                //                 }
+                //             })
+                //             .collect::<Vec<&str>>()
+                //             .join("")
+                //     );
+                // }
                 return bitmap;
             }
-            chunk_size = (self.width * self.height / JOBS as i32) as usize;
+            chunk_size = ((self.width * self.height) / JOBS as i32) as usize;
         }
         bitmap
             .par_chunks_mut(chunk_size) // Super handy, thx rayon
@@ -77,7 +95,8 @@ impl Fractal {
                     .take(next_bitmap_index as usize - current_bitmap_index as usize)
                     .map(|(x, y)| (*x, *y))
                     .collect::<Vec<(i32, i32)>>();
-                if tasks.is_empty() { // The bitmap is more than the tasks, so we can't just trust
+                if tasks.is_empty() {
+                    // The bitmap is more than the tasks, so we can't just trust
                     // that it will end by par_chunks_mut
                     return;
                 }
@@ -88,8 +107,6 @@ impl Fractal {
                     _ => panic!("Invalid fractal type, mandelbrot or julia?"),
                 }
             });
-
-        println!("Time taken to generate: {:.2?}", start.elapsed());
 
         bitmap
     }

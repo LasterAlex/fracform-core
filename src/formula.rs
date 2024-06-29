@@ -51,7 +51,7 @@ num = "0.4""#;
 
 pub fn compile_formula_project() -> std::io::Result<()> {
     let output = Command::new("cargo")
-        .env("RUSTFLAGS", "-Ctarget-cpu=native")  // It will always be compiled, so, like, obv
+        .env("RUSTFLAGS", "-Ctarget-cpu=native") // It will always be compiled, so, like, obv
         .args(&["build", "--release"])
         .current_dir("formula_project")
         .output()?;

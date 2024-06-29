@@ -50,20 +50,24 @@ fn save_bitmap(bitmap: &Vec<Vec<(u8, u8, u8)>>, name: &Path) {
 #[allow(dead_code)]
 fn make_animation() {
     // Fractal parameters
-    let width = 1000;
-    let height = 1000;
+    let width = 25;
+    let height = 25;
     let zoom = 0.5;
-    let iterations = 100;
-    let palette_mode = PaletteMode::BrownAndBlue;
-    let formula = "z.powf({factor:.2}) + c";
+    let iterations = 500;
+    // let palette_mode = PaletteMode::BrownAndBlue;
+    let palette_mode = PaletteMode::Naive {
+        shift: Some(100),
+        offset: Some(10),
+    };
+    let formula = "z.cos().ln().powc(c * 10.0) + c";
 
     // Animation parameters
-    let start_factor = 4.0;
-    let end_factor = 1.0;
-    let frame_count = 200;
-    let starting_frame = 0;  // If the animation is interrupted, set this to the last frame + 1
-    // Set to frame_count + 1 if you want to tweak the fps
-    let fps = 30;
+    let start_factor = -0.059;
+    let end_factor = -0.08;
+    let frame_count = 1000;
+    let starting_frame = 500; // If the animation is interrupted, set this to the last frame + 1
+                              // Set to frame_count + 1 if you want to tweak the fps
+    let fps = 60;
 
     // Animation generation
     let animation_directory_name = sanitize_filename(
@@ -82,13 +86,23 @@ fn make_animation() {
     let start = Instant::now();
     for frame in starting_frame..=frame_count {
         println!("{:.2?}%", frame as f64 / frame_count as f64 * 100.0);
-        factor = f(
-            frame as f64,
-            0.0,
-            start_factor as f64,
-            frame_count as f64,
-            end_factor as f64,
-        );
+        factor = if frame < frame_count / 2 {
+            f(
+                frame as f64,
+                0.0,
+                start_factor as f64,
+                frame_count as f64 / 2.0,
+                -0.062,
+            )
+        } else {
+            f(
+                frame as f64,
+                frame_count as f64 / 2.0,
+                -0.062,
+                frame_count as f64,
+                end_factor as f64,
+            )
+        };
         create_formula_project(
             formula
                 .format(&HashMap::from([("factor".to_string(), factor)]))
@@ -105,11 +119,11 @@ fn make_animation() {
             zoom,
             Complex::new(0.0, 0.0),
             iterations,
-            160,
-            Some(Complex::new(0.0, 0.0)),
+            1000,
+            Some(Complex::new(factor, 0.0)),
             palette_mode.clone(),
         );
-        let bitmap = fractal.clone().mandelbrot();
+        let bitmap = fractal.clone().julia();
 
         let color_bitmap = fractal.make_color_from_bitmap(bitmap);
         let file = current_animation_directory.join(format!("{}_fractal_animated.png", frame));
@@ -124,21 +138,24 @@ fn run() {
     // Parameters
     let width = 1000;
     let height = 1000;
-    let zoom = 0.7;
-    let center_coordinates = Complex::new(-0.5, 0.0);
-    let iterations = 500;
+    let zoom = 0.5;
+    let center_coordinates = Complex::new(0.0, 0.0);
+    let iterations = 5000;
 
     // let palette_mode = PaletteMode::Rainbow { offset: None };
     // let palette_mode = PaletteMode::Smooth { shift: None, offset: None };
     // let palette_mode = PaletteMode::BrownAndBlue;
     // let palette_mode = PaletteMode::Custom;
-    let palette_mode = PaletteMode::Naive { shift: Some(300), offset: Some(10) };
+    let palette_mode = PaletteMode::Naive {
+        shift: Some(3000),
+        offset: Some(0),
+    };
 
-    // let formula = "z.powc(z - c * z.powf(10.0)) + z.powf(10.0) + c";
     let formula = "z * z + c";
-    let fractal_type = FractalType::Mandelbrot;
-    let c = Complex::new(0.0, 0.5); // Important only for Julia sets
-    let max_abs = 1000;
+    let fractal_type = FractalType::Buddhabrot { rounds: 200_000_000 };
+    // let fractal_type = FractalType::Mandelbrot;
+    let c = Complex::new(0.0, 0.0); // Important only for Julia sets
+    let max_abs = 64;
 
     // Code
     let start = Instant::now();
@@ -161,18 +178,16 @@ fn run() {
         palette_mode,
     );
 
-    let fractal_bitmap = match fractal_type {
-        FractalType::Mandelbrot => fractal.clone().mandelbrot(),
-        FractalType::Julia => fractal.clone().julia(),
-        _ => todo!("Add the rest of the types"),
-    };
+    // let fractal_bitmap = match fractal_type {
+    //     FractalType::Mandelbrot => fractal.clone().mandelbrot(),
+    //     FractalType::Julia => fractal.clone().julia(),
+    //     _ => todo!("Add the rest of the types"),
+    // };
+    let fractal_bitmap = fractal.clone().buddhabrot(fractal_type);
     let color_bitmap = fractal.make_color_from_bitmap(fractal_bitmap);
 
     let path = create_file_path(formula);
-    save_bitmap(
-        &color_bitmap,
-        &path.as_path()
-    );
+    save_bitmap(&color_bitmap, &path.as_path());
     println!("Saved with name: {}", path.as_path().display());
 }
 
