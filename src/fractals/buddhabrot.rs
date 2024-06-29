@@ -13,7 +13,7 @@ fn z_escaped(z: Complex<f64>, max_abs: u32) -> bool {
 }
 
 impl Fractal {
-    pub fn buddhabrot_worker(&self, bitmap: &Arc<Mutex<Bitmap>>, tasks: &[Complex<f64>]) {
+    pub fn buddhabrot_worker(&self, bitmap: &mut Bitmap, tasks: &[Complex<f64>]) {
         for c in tasks.iter() {
             let mut z = Complex::new(0.0, 0.0);
 
@@ -26,7 +26,7 @@ impl Fractal {
                 let z_pix_x = z_pix.0 as i32;
                 let z_pix_y = z_pix.1 as i32;
                 if z_pix_x < self.width && z_pix_y < self.height && z_pix_x >= 0 && z_pix_y >= 0 {
-                    bitmap.lock().unwrap()[(z_pix_x * self.height + z_pix_y) as usize] += 1;
+                    bitmap[(z_pix_x * self.height + z_pix_y) as usize] += 1;
                 } else if z_escaped(z, self.max_abs) {
                     break; // We need both cuz there are fractals that 'loop around'
                            // and return back to the screen
@@ -36,7 +36,7 @@ impl Fractal {
     }
 
     pub fn buddhabrot(&self, fractal_type: FractalType) -> Bitmap {
-        let buddhabrot_bitmap = Arc::new(Mutex::new([0; MAX_PIXELS as usize]));
+        let mut buddhabrot_bitmap = [0; MAX_PIXELS as usize];
 
         let start = Instant::now();
         let FractalType::Buddhabrot { rounds } = fractal_type else {
@@ -77,21 +77,26 @@ impl Fractal {
             tasks.len(),
             start.elapsed().as_millis()
         );
-
-        let chunk_size;
-        unsafe {
-            chunk_size = tasks.len() / JOBS as usize;
-        }
-
-        let start = Instant::now();
-
-        tasks.par_chunks(chunk_size).for_each(|chunk| {
-            self.buddhabrot_worker(&buddhabrot_bitmap, chunk);
-        });
-
+        self.buddhabrot_worker(&mut buddhabrot_bitmap, &tasks);
         println!("Time taken to generate buddhabrot: {:.2?}", start.elapsed());
+        return buddhabrot_bitmap;
 
-        let binding = *buddhabrot_bitmap.lock().unwrap();
-        binding
+        // I could NOT get the parallelization to work effectively at ALL, it was only making stuff
+        // slower, Mutex really slows everything down, cuz a LOT of everything needs to be copied
+
+        // let chunk_size;
+        // unsafe {
+        //     if JOBS == 1 {}
+        //     chunk_size = tasks.len() / JOBS as usize;
+        // }
+        //
+
+        // tasks.par_chunks(chunk_size).for_each(|chunk| {
+        //     self.buddhabrot_worker(&buddhabrot_bitmap, chunk);
+        // });
+        //
+        // println!("Time taken to generate buddhabrot: {:.2?}", start.elapsed());
+        //
+        // buddhabrot_bitmap
     }
 }

@@ -59,24 +59,6 @@ impl Fractal {
                     _ => panic!("Invalid fractal type, mandelbrot or julia?"),
                 }
                 println!("Time taken to generate: {:.2?}", start.elapsed());
-                // for x in 0..self.width {
-                //     println!(
-                //         "{:?}",
-                //         bitmap
-                //             .iter()
-                //             .skip((x * self.height) as usize)
-                //             .take(self.height as usize)
-                //             .map(|x| {
-                //                 if *x < self.iterations {
-                //                     "X"
-                //                 } else {
-                //                     " "
-                //                 }
-                //             })
-                //             .collect::<Vec<&str>>()
-                //             .join("")
-                //     );
-                // }
                 return bitmap;
             }
             chunk_size = ((self.width * self.height) / JOBS as i32) as usize;
@@ -107,6 +89,8 @@ impl Fractal {
                     _ => panic!("Invalid fractal type, mandelbrot or julia?"),
                 }
             });
+
+        println!("Time taken to generate: {:.2?}", start.elapsed());
 
         bitmap
     }
