@@ -25,9 +25,8 @@ I have adored fractals for a very long time, and this is the first actually good
 2) Tweak the parameters to your liking _(`factor:.2` in the formula is a linear function, starting from `start_factor`, and ending on `end_factor`)_
 3) Ensure that `make_animation` is spawned by `child` in the `fn main()`
 4) `cargo run --release`
-5) You will find your animation frames at ./generated/animations/_this\_changes\_for\_every\_formula_
-6) Make it into an mp4 (porting the script for that to rust is ongoing)
-7) You will find your animation mp4  at ./generated/animations
+5) You will find your animation frames at ./generated/animations/_this\_changes\_for\_every\_formula_, you can delete them if you want
+6) You will find your animation mp4 at ./generated/animations
 
 #### config.rs:
 

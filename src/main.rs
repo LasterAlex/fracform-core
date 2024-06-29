@@ -19,6 +19,7 @@ pub mod colors;
 pub mod config;
 pub mod formula;
 pub mod fractals;
+pub mod frames_to_mp4;
 
 fn sanitize_filename(name: String) -> String {
     name.replace(" ", "").replace("/", "÷").replace("*", "×")
@@ -51,16 +52,18 @@ fn make_animation() {
     // Fractal parameters
     let width = 1000;
     let height = 1000;
-    let zoom = 0.7;
-    let iterations = 1000;
-    let palette_mode = PaletteMode::Rainbow { offset: Some(205) };
-    let formula = "z * c + z.powf({factor:.2}) + c";
+    let zoom = 0.5;
+    let iterations = 100;
+    let palette_mode = PaletteMode::BrownAndBlue;
+    let formula = "z.powf({factor:.2}) + c";
 
     // Animation parameters
-    let start_factor = 0.0;
-    let end_factor = 10.0;
-    let frame_count = 2000;
+    let start_factor = 4.0;
+    let end_factor = 1.0;
+    let frame_count = 200;
     let starting_frame = 0;  // If the animation is interrupted, set this to the last frame + 1
+    // Set to frame_count + 1 if you want to tweak the fps
+    let fps = 30;
 
     // Animation generation
     let animation_directory_name = sanitize_filename(
@@ -113,6 +116,7 @@ fn make_animation() {
         save_bitmap(&color_bitmap, file.as_path());
     }
     println!("Animation took {:.2?}", start.elapsed());
+    frames_to_mp4::make_mp4(current_animation_directory.as_path(), fps);
 }
 
 #[allow(dead_code)]

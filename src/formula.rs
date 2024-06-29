@@ -11,15 +11,13 @@ pub fn create_formula_project(user_function: &str) -> std::io::Result<bool> {
     let src_dir = project_dir.join("src");
 
     let main_rs_content = format!(
-        r#"
-        extern crate num;
-        use num::Complex;
+        r#"use num::Complex;
 
-        #[no_mangle]
-        pub extern "C" fn user_function(z: Complex<f64>, c: Complex<f64>) -> Complex<f64> {{
-            {}
-        }}
-        "#,
+#[no_mangle]
+pub extern "C" fn user_function(z: Complex<f64>, c: Complex<f64>) -> Complex<f64> {{
+    {}
+}}
+"#,
         user_function
     );
     // If the lib.rs already has the same code, we are done
@@ -31,18 +29,16 @@ pub fn create_formula_project(user_function: &str) -> std::io::Result<bool> {
     fs::create_dir_all(&src_dir)?;
 
     // Generate Cargo.toml
-    let cargo_toml_content = r#"
-        [package]
-        name = "formula_project"
-        version = "0.1.0"
-        edition = "2021"
+    let cargo_toml_content = r#"[package]
+name = "formula_project"
+version = "0.1.0"
+edition = "2021"
 
-        [lib]
-        crate-type = ["cdylib"]
+[lib]
+crate-type = ["cdylib"]
 
-        [dependencies]
-        num = "0.4"
-    "#;
+[dependencies]
+num = "0.4""#;
     let mut cargo_toml = File::create(project_dir.join("Cargo.toml"))?;
     cargo_toml.write_all(cargo_toml_content.as_bytes())?;
 
