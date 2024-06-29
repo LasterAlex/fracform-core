@@ -53,7 +53,7 @@ fn make_animation() {
     let width = 25;
     let height = 25;
     let zoom = 0.5;
-    let iterations = 500;
+    let iterations = 5000;
     // let palette_mode = PaletteMode::BrownAndBlue;
     let palette_mode = PaletteMode::Naive {
         shift: Some(100),

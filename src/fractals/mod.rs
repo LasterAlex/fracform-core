@@ -15,6 +15,7 @@ use crate::{
 
 pub type Bitmap = [u32; MAX_PIXELS as usize];
 
+#[derive(Clone)]
 pub enum FractalType {
     Mandelbrot,
     Julia,
