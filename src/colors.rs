@@ -169,9 +169,9 @@ fn hits_to_nebula(hits: u32, max_hits: u32) -> (u8, u8, u8) {
 }
 
 #[cached(
-    ty = "UnboundCache<u32, (u8, u8, u8)>",
+    ty = "UnboundCache<(u32, u32), (u8, u8, u8)>",
     create = "{ UnboundCache::new() }",
-    convert = r#"{ param }"#
+    convert = r#"{ (param, max_param) }"#
 )]
 pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, u8, u8) {
     match palette_mode {

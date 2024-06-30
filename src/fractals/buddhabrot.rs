@@ -36,7 +36,8 @@ impl Fractal {
                 let z_pix = self.coord_to_pix(z);
                 let z_pix_x = z_pix.0 as i32;
                 let z_pix_y = z_pix.1 as i32;
-                if i > 1
+                if i > 1  // This is to avoid the grid lines, try removing it and zoom in where
+                // there is not much color
                     && z_pix_x < self.width
                     && z_pix_y < self.height
                     && z_pix_x >= 0
@@ -75,7 +76,6 @@ impl Fractal {
         mandelbrot_bitmap: &Bitmap,
         fractal_type: FractalType,
     ) -> Vec<Complex<f64>> {
-        let start = Instant::now();
         let is_antibuddhabrot =
             discriminant(&fractal_type) == discriminant(&FractalType::Antibuddhabrot { rounds: 0 });
         let rounds = match fractal_type {
@@ -112,15 +112,15 @@ impl Fractal {
 
         let mut c = Complex::new(current_x_coord, current_y_coord);
         let mut current_pixel = self.coord_to_pix(c);
-        println!(
-            "Worker {} starting at {}, {},  next is {}, {}, in {:.2?}",
-            worker_num,
-            c.re,
-            c.im,
-            next_x_coord,
-            next_y_coord,
-            start.elapsed()
-        );
+        // println!(
+        //     "Worker {} starting at {}, {},  next is {}, {}, in {:.2?}",
+        //     worker_num,
+        //     c.re,
+        //     c.im,
+        //     next_x_coord,
+        //     next_y_coord,
+        //     start.elapsed()
+        // );
         let mut task_buf = vec![];
         loop {
             let mandelbrot_pixel = mandelbrot_bitmap  // The said optimization
