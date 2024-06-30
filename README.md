@@ -34,6 +34,7 @@ I have adored fractals for a very long time, and this is the first actually good
 `JOBS` - the jobs created to generate fractals. In general, if the fractal is small and fast - 1 job is better, cuz spawning jobs costs time, but if it's a big and complicated fractal that takes seconds to make, tweaking `JOBS` will improve the speed
 `STACK_SIZE` - the size of the stack. The bigger it is, the bigger `MAX_PIXELS` can get, but also slower startup times spent on allocating that stack
 `*_DIR` - The name of the directories, NOT PATH! The path structure is set in code for consistency
+`WRITE_TO_BITMAP_LEN_THRESHOLD` - The threshold for writing to a vector in the buddhabrot code. The lower it is, the slower it is, but the higher it is, the more heap gets used.
 
 ---
 ### Notes:
