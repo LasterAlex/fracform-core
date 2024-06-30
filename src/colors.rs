@@ -1,4 +1,5 @@
 use cached::UnboundCache;
+use palette::{Gradient, LinSrgb};
 use std::cmp::min;
 
 use cached::proc_macro::cached;
@@ -20,6 +21,12 @@ pub enum PaletteMode {
         offset: Option<u32>,
     },
     Custom,
+    GrayScale {
+        shift: Option<u32>,
+    },
+    Nebula {
+        shift: Option<u32>,
+    },
 }
 
 pub fn naive_color(iterations: u32, max_iterations: u32, shift: u32, offset: u32) -> (u8, u8, u8) {
@@ -137,14 +144,41 @@ fn iters_to_color(iters: u32, max_iterations: u32, offset: u32) -> (u8, u8, u8) 
     (red, green, blue)
 }
 
+fn hits_to_nebula(hits: u32, max_hits: u32) -> (u8, u8, u8) {
+    // NOT YET READY
+    let gradient = Gradient::new(vec![
+        LinSrgb::new(0.0, 0.0, 0.0), // Black
+        LinSrgb::new(0.0, 0.0, 0.5), // Dark Blue
+        LinSrgb::new(0.0, 0.0, 1.0), // Blue
+        LinSrgb::new(0.0, 1.0, 1.0), // Cyan
+        LinSrgb::new(0.0, 1.0, 0.0), // Green
+        LinSrgb::new(1.0, 1.0, 0.0), // Yellow
+        LinSrgb::new(1.0, 0.0, 0.0), // Red
+        LinSrgb::new(1.0, 1.0, 1.0), // White
+    ]);
+
+    let fraction = hits as f64 / max_hits as f64;
+    let color = gradient.get(fraction);
+    let rgb = color.into_linear();
+
+    (
+        (rgb.red * 255.0) as u8,
+        (rgb.green * 255.0) as u8,
+        (rgb.blue * 255.0) as u8,
+    )
+}
+
 #[cached(
     ty = "UnboundCache<u32, (u8, u8, u8)>",
     create = "{ UnboundCache::new() }",
-    convert = r#"{ iters }"#
+    convert = r#"{ param }"#
 )]
-pub fn set_color(iters: u32, max_iterations: u32, palette_mode: PaletteMode) -> (u8, u8, u8) {
+pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, u8, u8) {
     match palette_mode {
         PaletteMode::BrownAndBlue => {
+            if param >= max_param {
+                return (0, 0, 0);
+            }
             let colors = [
                 (66, 30, 15),
                 (25, 7, 26),
@@ -163,13 +197,19 @@ pub fn set_color(iters: u32, max_iterations: u32, palette_mode: PaletteMode) -> 
                 (153, 87, 0),
                 (106, 52, 3),
             ];
-            return colors[iters as usize % colors.len()];
+            return colors[param as usize % colors.len()];
         }
         PaletteMode::Rainbow { offset } => {
-            iters_to_color(iters, max_iterations, offset.unwrap_or(0))
+            if param >= max_param {
+                return (0, 0, 0);
+            }
+            iters_to_color(param, max_param, offset.unwrap_or(0))
         }
         PaletteMode::Smooth { shift, offset } => {
-            let n = (iters + offset.unwrap_or(0)) as f64 / shift.unwrap_or(max_iterations) as f64;
+            if param >= max_param {
+                return (0, 0, 0);
+            }
+            let n = (param + offset.unwrap_or(0)) as f64 / shift.unwrap_or(max_param) as f64;
             let t = 1.0 - (n - n.trunc());
             let r = min(255, (9.0 * (1.0 - t) * t.powi(3) * 255.0).round() as u8);
             let g = min(
@@ -179,15 +219,35 @@ pub fn set_color(iters: u32, max_iterations: u32, palette_mode: PaletteMode) -> 
             let b = min(255, (8.5 * (1.0 - t).powi(3) * t * 255.0).round() as u8);
             (r, g, b)
         }
-        PaletteMode::Naive { shift, offset } => naive_color(
-            iters,
-            max_iterations,
-            shift.unwrap_or(max_iterations),
-            offset.unwrap_or(0),
-        ),
+        PaletteMode::Naive { shift, offset } => {
+            if param >= max_param {
+                return (0, 0, 0);
+            }
+            naive_color(
+                param,
+                max_param,
+                shift.unwrap_or(max_param),
+                offset.unwrap_or(0),
+            )
+        }
         PaletteMode::Custom => {
+            if param >= max_param {
+                return (0, 0, 0);
+            }
             let custom_palette = create_custom_pallete();
-            return custom_palette[iters as usize % custom_palette.len()];
+            return custom_palette[param as usize % custom_palette.len()];
+        }
+        PaletteMode::GrayScale { shift } => {
+            let gray = min(
+                255,
+                (param as f64 / shift.unwrap_or(max_param) as f64 * 255.0)
+                    .powf(1.0)
+                    .round() as u8,
+            );
+            (gray, gray, gray)
+        }
+        PaletteMode::Nebula { shift } => {
+            hits_to_nebula(min(param, max_param), shift.unwrap_or(max_param))
         }
     }
 }

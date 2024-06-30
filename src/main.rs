@@ -1,3 +1,4 @@
+extern crate palette;
 use std::{
     collections::HashMap,
     fs,
@@ -55,10 +56,7 @@ fn make_animation() {
     let zoom = 0.5;
     let iterations = 5000;
     // let palette_mode = PaletteMode::BrownAndBlue;
-    let palette_mode = PaletteMode::Naive {
-        shift: Some(100),
-        offset: Some(10),
-    };
+    let palette_mode = PaletteMode::GrayScale { shift: Some(1000) };
     let formula = "z.cos().ln().powc(c * 10.0) + c";
 
     // Animation parameters
@@ -142,18 +140,14 @@ fn run() {
     let center_coordinates = Complex::new(0.0, 0.0);
     let iterations = 5000;
 
-    // let palette_mode = PaletteMode::Rainbow { offset: None };
-    // let palette_mode = PaletteMode::Smooth { shift: None, offset: None };
-    // let palette_mode = PaletteMode::BrownAndBlue;
-    // let palette_mode = PaletteMode::Custom;
-    let palette_mode = PaletteMode::Naive {
-        shift: Some(3000),
-        offset: Some(0),
+    let palette_mode = PaletteMode::GrayScale {
+        shift: None,
     };
 
     let formula = "z * z + c";
-    let fractal_type = FractalType::Buddhabrot { rounds: 200_000_000 };
-    // let fractal_type = FractalType::Mandelbrot;
+    let fractal_type = FractalType::Buddhabrot {
+        rounds: 200_000_000,
+    };
     let c = Complex::new(0.0, 0.0); // Important only for Julia sets
     let max_abs = 64;
 
@@ -178,12 +172,16 @@ fn run() {
         palette_mode,
     );
 
-    // let fractal_bitmap = match fractal_type {
-    //     FractalType::Mandelbrot => fractal.clone().mandelbrot(),
-    //     FractalType::Julia => fractal.clone().julia(),
-    //     _ => todo!("Add the rest of the types"),
-    // };
-    let fractal_bitmap = fractal.clone().buddhabrot(fractal_type);
+    let fractal_bitmap = match fractal_type {
+        FractalType::Mandelbrot => fractal.clone().mandelbrot(),
+        FractalType::Julia => fractal.clone().julia(),
+        FractalType::Buddhabrot { .. } => {
+            fractal.clone().buddhabrot_or_antibuddhabrot(fractal_type)
+        }
+        FractalType::Antibuddhabrot { .. } => {
+            fractal.clone().buddhabrot_or_antibuddhabrot(fractal_type)
+        }
+    };
     let color_bitmap = fractal.make_color_from_bitmap(fractal_bitmap);
 
     let path = create_file_path(formula);

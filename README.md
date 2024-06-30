@@ -60,7 +60,7 @@ I have adored fractals for a very long time, and this is the first actually good
 - [x] Parallelize the code
 - [x] Add different colorings
 - [x] Animation generation
-- [ ] Add buddhabrot and antibuddhabrot
+- [x] Add buddhabrot and antibuddhabrot
 - [ ] Make the GOOD coloring to all of fractals
 - [ ] Add nebulabrot
 - [ ] Add a smart way of memorizing every fractal (save every parameter to recreate the fractal)

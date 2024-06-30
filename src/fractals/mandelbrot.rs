@@ -38,7 +38,7 @@ impl Fractal {
         }
     }
 
-    pub fn mandelbrot_or_julia(self, fractal_type: FractalType) -> Bitmap {
+    pub fn mandelbrot_or_julia(&self, fractal_type: FractalType) -> Bitmap {
         // To not write the same code twice
         let mut bitmap = [0; MAX_PIXELS as usize]; // Vecs are A LOT slower, cuz heap
         let mut pixels = vec![];
@@ -49,20 +49,19 @@ impl Fractal {
             }
         }
         let start = Instant::now();
-        let chunk_size;
-        unsafe {
-            // Cuz it's working with mut static JOBS, it's ok
-            if JOBS == 1 {
-                match fractal_type {
-                    FractalType::Mandelbrot => self.mandelbrot_worker(&mut bitmap, pixels.clone()),
-                    FractalType::Julia => self.julia_worker(&mut bitmap, pixels.clone()),
-                    _ => panic!("Invalid fractal type, mandelbrot or julia?"),
-                }
-                println!("Time taken to generate: {:.2?}", start.elapsed());
-                return bitmap;
+
+        let jobs_lock = *JOBS.lock().unwrap();
+        if jobs_lock == 1 {
+            match fractal_type {
+                FractalType::Mandelbrot => self.mandelbrot_worker(&mut bitmap, pixels.clone()),
+                FractalType::Julia => self.julia_worker(&mut bitmap, pixels.clone()),
+                _ => panic!("Invalid fractal type, mandelbrot or julia?"),
             }
-            chunk_size = ((self.width * self.height) / JOBS as i32) as usize;
+            println!("Time taken to generate: {:.2?}", start.elapsed());
+            return bitmap;
         }
+        let chunk_size = ((self.width * self.height) / jobs_lock as i32) as usize;
+
         bitmap
             .par_chunks_mut(chunk_size) // Super handy, thx rayon
             .enumerate()
@@ -95,11 +94,11 @@ impl Fractal {
         bitmap
     }
 
-    pub fn mandelbrot(self) -> Bitmap {
+    pub fn mandelbrot(&self) -> Bitmap {
         self.mandelbrot_or_julia(FractalType::Mandelbrot)
     }
 
-    pub fn julia(self) -> Bitmap {
+    pub fn julia(&self) -> Bitmap {
         self.mandelbrot_or_julia(FractalType::Julia)
     }
 }

@@ -1,7 +1,7 @@
 pub mod buddhabrot;
 pub mod mandelbrot;
 use cached::UnboundCache;
-use std::time::Instant;
+use std::{mem::discriminant, time::Instant};
 
 use cached::proc_macro::cached;
 
@@ -15,11 +15,12 @@ use crate::{
 
 pub type Bitmap = [u32; MAX_PIXELS as usize];
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum FractalType {
     Mandelbrot,
     Julia,
     Buddhabrot { rounds: u32 },
+    Antibuddhabrot { rounds: u32 },
 }
 
 pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
@@ -114,14 +115,15 @@ fn y_coord_to_pix(y: f64, width: i32, height: i32, shift_y: f64, zoom: f64) -> f
     ) + offset
 }
 
-pub fn hits_to_col_sqrt(val: u32, max: u32, min: u32) -> u8 {
-    // Buddhabrot code
-    //3rd root gives better results
-    (((val - min) as f64 / max as f64).powf(1. / 1.7) * 255.) as u8
-}
+fn sort<A, T>(mut array: A) -> A
+where
+    A: AsMut<[T]>,
+    T: Ord,
+{
+    let slice = array.as_mut();
+    slice.sort();
 
-pub fn hits_to_col_lin(val: u32, max: u32) -> u8 {
-    ((val as f64 / max as f64) * 255.) as u8
+    array
 }
 
 #[derive(Clone)]
@@ -183,13 +185,23 @@ impl Fractal {
     pub fn make_color_from_bitmap(&self, bitmap: Bitmap) -> Vec<Vec<(u8, u8, u8)>> {
         let default_color = (0, 0, 0);
         let mut color_bitmap = vec![vec![default_color; self.height as usize]; self.width as usize];
+        let mut max_param = self.iterations;
+        if discriminant(&self.palette_mode) == discriminant(&PaletteMode::GrayScale { shift: None })
+            || discriminant(&self.palette_mode)
+                == discriminant(&PaletteMode::Nebula { shift: None })
+        {
+            let mut tmp: Vec<&u32> = bitmap
+                .iter()
+                .take(self.width as usize * self.height as usize)
+                .collect();
+            sort(&mut tmp);
+            max_param = *tmp[tmp.len() - 100];
+        }
         let start = Instant::now();
         for x in 0..self.width as usize {
             for y in 0..self.height as usize {
                 let i = bitmap[(x * self.height as usize + y) as usize];
-                if i < self.iterations {
-                    color_bitmap[x][y] = set_color(i, self.iterations, self.palette_mode.clone());
-                }
+                color_bitmap[x][y] = set_color(i, max_param, self.palette_mode.clone());
             }
         }
         let elapsed = start.elapsed();
