@@ -1,5 +1,4 @@
 use cached::UnboundCache;
-use palette::{Gradient, LinSrgb};
 use std::cmp::min;
 
 use cached::proc_macro::cached;
@@ -22,9 +21,6 @@ pub enum PaletteMode {
     },
     Custom,
     GrayScale {
-        shift: Option<u32>,
-    },
-    Nebula {
         shift: Option<u32>,
     },
 }
@@ -144,30 +140,6 @@ fn iters_to_color(iters: u32, max_iterations: u32, offset: u32) -> (u8, u8, u8) 
     (red, green, blue)
 }
 
-fn hits_to_nebula(hits: u32, max_hits: u32) -> (u8, u8, u8) {
-    // NOT YET READY
-    let gradient = Gradient::new(vec![
-        LinSrgb::new(0.0, 0.0, 0.0), // Black
-        LinSrgb::new(0.0, 0.0, 0.5), // Dark Blue
-        LinSrgb::new(0.0, 0.0, 1.0), // Blue
-        LinSrgb::new(0.0, 1.0, 1.0), // Cyan
-        LinSrgb::new(0.0, 1.0, 0.0), // Green
-        LinSrgb::new(1.0, 1.0, 0.0), // Yellow
-        LinSrgb::new(1.0, 0.0, 0.0), // Red
-        LinSrgb::new(1.0, 1.0, 1.0), // White
-    ]);
-
-    let fraction = hits as f64 / max_hits as f64;
-    let color = gradient.get(fraction);
-    let rgb = color.into_linear();
-
-    (
-        (rgb.red * 255.0) as u8,
-        (rgb.green * 255.0) as u8,
-        (rgb.blue * 255.0) as u8,
-    )
-}
-
 #[cached(
     ty = "UnboundCache<(u32, u32), (u8, u8, u8)>",
     create = "{ UnboundCache::new() }",
@@ -245,9 +217,6 @@ pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, 
                     .round() as u8,
             );
             (gray, gray, gray)
-        }
-        PaletteMode::Nebula { shift } => {
-            hits_to_nebula(min(param, max_param), shift.unwrap_or(max_param))
         }
     }
 }

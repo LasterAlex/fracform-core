@@ -50,11 +50,13 @@ impl Fractal {
                 }
             }
             if (i == self.iterations && is_antibuddhabrot)
-                || (!is_antibuddhabrot && i < self.iterations)  // If it didn't escape we dont need it
+                || (!is_antibuddhabrot && i < self.iterations)
+            // If it didn't escape we dont need it
             {
                 pix_buf.extend_from_slice(&add_buf);
             }
-            if pix_buf.len() > WRITE_TO_BITMAP_LEN_THRESHOLD {  // Otherwise it will fill up to the
+            if pix_buf.len() > WRITE_TO_BITMAP_LEN_THRESHOLD {
+                // Otherwise it will fill up to the
                 // limit of RAM and swap
                 let mut lock = bitmap.lock().unwrap();
                 for pix in pix_buf.iter() {

@@ -1,5 +1,6 @@
 pub mod buddhabrot;
 pub mod mandelbrot;
+pub mod nebulabrot;
 use cached::UnboundCache;
 use std::{mem::discriminant, time::Instant};
 
@@ -19,8 +20,26 @@ pub type Bitmap = [u32; MAX_PIXELS as usize];
 pub enum FractalType {
     Mandelbrot,
     Julia,
-    Buddhabrot { rounds: u32 },
-    Antibuddhabrot { rounds: u32 },
+    Buddhabrot {
+        rounds: u32,
+    },
+    Antibuddhabrot {
+        rounds: u32,
+    },
+    Nebulabrot {
+        rounds: u32,
+        red_iters: u32,
+        green_iters: u32,
+        blue_iters: u32,
+        color_shift: Option<u32>,
+    },
+    Antinebulabrot {
+        rounds: u32,
+        red_iters: u32,
+        green_iters: u32,
+        blue_iters: u32,
+        color_shift: Option<u32>,
+    },
 }
 
 pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
@@ -187,8 +206,6 @@ impl Fractal {
         let mut color_bitmap = vec![vec![default_color; self.height as usize]; self.width as usize];
         let mut max_param = self.iterations;
         if discriminant(&self.palette_mode) == discriminant(&PaletteMode::GrayScale { shift: None })
-            || discriminant(&self.palette_mode)
-                == discriminant(&PaletteMode::Nebula { shift: None })
         {
             let mut tmp: Vec<&u32> = bitmap
                 .iter()

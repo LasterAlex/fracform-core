@@ -1,6 +1,6 @@
 # Fracform Core
 
-This is the core library for fractal generation, named after FRACtal FORMing (cuz fracgen sounds boring)
+This is the core library for fractal generation, named after FRACtal FORMing (cuz fracgen sounds boring) (or it may have been FRACtal FORMula, cuz it can use any formula to make the fractal, tbh idk, it was a long time ago, maybe even FORMing of FRACtals)
 
 The goal is to make a library that can very efficiently generate
 
@@ -62,8 +62,8 @@ I have adored fractals for a very long time, and this is the first actually good
 - [x] Add different colorings
 - [x] Animation generation
 - [x] Add buddhabrot and antibuddhabrot
+- [x] Add nebulabrot and antinebulabrot
 - [ ] Make the GOOD coloring to all of fractals
-- [ ] Add nebulabrot
 - [ ] Add a smart way of memorizing every fractal (save every parameter to recreate the fractal)
 - [ ] Make some form of CLI
 - [ ] Convert it to an actual library, instead of a regular project 
