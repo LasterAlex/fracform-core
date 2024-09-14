@@ -32,6 +32,7 @@ pub enum FractalType {
         green_iters: u32,
         blue_iters: u32,
         color_shift: Option<u32>,
+        uniform_factor: Option<f64>,
     },
     Antinebulabrot {
         rounds: u32,
@@ -39,6 +40,7 @@ pub enum FractalType {
         green_iters: u32,
         blue_iters: u32,
         color_shift: Option<u32>,
+        uniform_factor: Option<f64>,
     },
 }
 
@@ -147,14 +149,14 @@ where
 
 #[derive(Clone)]
 pub struct Fractal {
-    width: i32,
-    height: i32,
-    zoom: f64,
-    shift: Complex<f64>,
-    c: Option<Complex<f64>>,
-    iterations: u32,
-    max_abs: u32,
-    palette_mode: PaletteMode,
+    pub width: i32,
+    pub height: i32,
+    pub zoom: f64,
+    pub shift: Complex<f64>,
+    pub c: Option<Complex<f64>>,
+    pub iterations: u32,
+    pub max_abs: u32,
+    pub palette_mode: PaletteMode,
 }
 
 pub fn function(z: Complex<f64>, c: Complex<f64>) -> Complex<f64> {
@@ -205,7 +207,11 @@ impl Fractal {
         let default_color = (0, 0, 0);
         let mut color_bitmap = vec![vec![default_color; self.height as usize]; self.width as usize];
         let mut max_param = self.iterations;
-        if discriminant(&self.palette_mode) == discriminant(&PaletteMode::GrayScale { shift: None })
+        if discriminant(&self.palette_mode)
+            == discriminant(&PaletteMode::GrayScale {
+                shift: None,
+                uniform_factor: None,
+            })
         {
             let mut tmp: Vec<&u32> = bitmap
                 .iter()

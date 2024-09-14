@@ -13,7 +13,7 @@ use fractals::{f, Fractal, FractalType};
 use image::{ImageBuffer, Rgb};
 use num::Complex;
 use rand::distributions::{Alphanumeric, DistString};
-use strfmt::Format; // 0.8
+use strfmt::Format;
 
 pub mod colors;
 pub mod config;
@@ -55,19 +55,34 @@ fn make_and_save_fractal(fractal: &mut Fractal, fractal_type: FractalType, file_
         green_iters,
         blue_iters,
         color_shift,
+        uniform_factor,
     } = fractal_type
     {
-        color_bitmap = fractal.nebulabrot(rounds, red_iters, green_iters, blue_iters, color_shift);
+        color_bitmap = fractal.nebulabrot(
+            rounds,
+            red_iters,
+            green_iters,
+            blue_iters,
+            color_shift,
+            uniform_factor,
+        );
     } else if let FractalType::Antinebulabrot {
         rounds,
         red_iters,
         green_iters,
         blue_iters,
         color_shift,
+        uniform_factor,
     } = fractal_type
     {
-        color_bitmap =
-            fractal.antinebulabrot(rounds, red_iters, green_iters, blue_iters, color_shift);
+        color_bitmap = fractal.antinebulabrot(
+            rounds,
+            red_iters,
+            green_iters,
+            blue_iters,
+            color_shift,
+            uniform_factor,
+        );
     } else {
         let fractal_bitmap = match fractal_type {
             FractalType::Mandelbrot => fractal.mandelbrot(),
@@ -86,12 +101,25 @@ fn make_and_save_fractal(fractal: &mut Fractal, fractal_type: FractalType, file_
 #[allow(dead_code)]
 fn make_animation() {
     // Fractal parameters
-    let width = 1500;
-    let height = 1500;
+    let width = 1000;
+    let height = 1000;
     let zoom = 0.5;
-    let iterations = 300;
-    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
-    let formula = "1.0/(z.powf({factor:.6}) + c)";
+    let iterations = 1000;
+    let max_abs = 64;
+    let palette_mode = PaletteMode::Smooth {
+        shift: Some(200),
+        offset: None,
+    };
+    let formula = "z - c / (z.powf({factor:.6}) + c)";
+    let additional_info = "";
+    // let fractal_type = FractalType::Nebulabrot {
+    //     rounds: 100_000_000,
+    //     red_iters: 1000,
+    //     green_iters: 100,
+    //     blue_iters: 10,
+    //     color_shift: None,
+    //     uniform_factor: Some(0.9),
+    // };
     let fractal_type = FractalType::Mandelbrot;
 
     // Animation parameters
@@ -100,13 +128,14 @@ fn make_animation() {
     let frame_count = 500;
     let starting_frame = 0; // If the animation is interrupted, set this to the last frame + 1
                             // Set to frame_count + 1 if you want to tweak the fps
-    let fps = 50;
+    let fps = 40;
 
     // Animation generation
     let animation_directory_name = sanitize_filename(
         formula
             .format(&HashMap::from([("factor".to_string(), start_factor)]))
-            .unwrap(),
+            .unwrap()
+            + additional_info,
     );
     let generated_path = Path::new(GENERATED_DIR);
     let animations_path = generated_path.join(Path::new(ANIMATIONS_DIR));
@@ -150,8 +179,8 @@ fn make_animation() {
             zoom,
             Complex::new(0.0, 0.0),
             iterations,
-            32,
-            Some(Complex::new(0.0, 0.0)),
+            max_abs,
+            None,
             palette_mode.clone(),
         );
         let file = current_animation_directory.join(format!("{}_fractal_animated.png", frame));
@@ -164,24 +193,40 @@ fn make_animation() {
 #[allow(dead_code)]
 fn run() {
     // Parameters
-    let width = 10000;
-    let height = 10000;
-    let zoom = 0.5;
+    let width = 1000;
+    let height = 1000;
+    let zoom = 0.1;
     let center_coordinates = Complex::new(0.0, 0.0);
-    let iterations = 5000;
+    let iterations = 1000;
 
-    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
-
-    let formula = "z * z + c";
-    let fractal_type = FractalType::Nebulabrot {
-        rounds: 1_000_000_000,
-        red_iters: 5000,
-        green_iters: 500,
-        blue_iters: 50,
-        color_shift: None,
+    // let palette_mode = PaletteMode::GrayScale {
+    //     shift: None,
+    //     uniform_factor: Some(0.5),
+    // };
+    // let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
+    let palette_mode = PaletteMode::Smooth {
+        shift: Some(200),
+        offset: None,
     };
+
+    let formula = "z - c / (z.powf(1.5) + c)";
+    // let fractal_type = FractalType::Nebulabrot {
+    //     rounds: 10_000_000,
+    //     red_iters: 1000,
+    //     green_iters: 100,
+    //     blue_iters: 10,
+    //     color_shift: None,
+    //     uniform_factor: Some(0.9),
+    // };
+    // let fractal_type = FractalType::Buddhabrot {
+    //     rounds: width * height * 4_u32.pow(2),
+    // };
+    // let fractal_type = FractalType::Antibuddhabrot { rounds: 20_000_000 };
+    // let fractal_type = FractalType::Buddhabrot { rounds: 400_000_000 };
+    let fractal_type = FractalType::Mandelbrot;
+    // let fractal_type = FractalType::Julia;
     let c = Complex::new(0.0, 0.0); // Important only for Julia sets
-    let max_abs = 32;
+    let max_abs = 64;
 
     // Code
     let start = Instant::now();
@@ -194,8 +239,8 @@ fn run() {
     println!("Library loaded in {:.2?}", start.elapsed());
 
     let mut fractal = Fractal::new(
-        width,
-        height,
+        width as i32,
+        height as i32,
         zoom,
         center_coordinates,
         iterations,

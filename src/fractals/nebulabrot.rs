@@ -9,6 +9,7 @@ impl Fractal {
         green_iter: u32,
         blue_iter: u32,
         color_shift: Option<u32>,
+        uniform_factor: Option<f64>,
     ) -> Vec<Vec<(u8, u8, u8)>> {
         // I could try to make this more efficient, but honestly,
         // it's not worth it, the difference between nebulabrot and buddhabrot is 1.7x.
@@ -61,19 +62,19 @@ impl Fractal {
                 let color_red = set_color(
                     hits_red,
                     red_max_param,
-                    PaletteMode::GrayScale { shift: color_shift },
+                    PaletteMode::GrayScale { shift: color_shift , uniform_factor},
                 )
                 .0;
                 let color_green = set_color(
                     hits_green,
                     green_max_param,
-                    PaletteMode::GrayScale { shift: color_shift },
+                    PaletteMode::GrayScale { shift: color_shift , uniform_factor},
                 )
                 .0;
                 let color_blue = set_color(
                     hits_blue,
                     blue_max_param,
-                    PaletteMode::GrayScale { shift: color_shift },
+                    PaletteMode::GrayScale { shift: color_shift , uniform_factor},
                 )
                 .0;
                 color_bitmap[x][y] = (color_red, color_green, color_blue);
@@ -92,6 +93,7 @@ impl Fractal {
         green_iter: u32,
         blue_iter: u32,
         color_shift: Option<u32>,
+        uniform_factor: Option<f64>,
     ) -> Vec<Vec<(u8, u8, u8)>> {
         self.nebulabrot_or_antinebulabrot(
             false,
@@ -100,6 +102,7 @@ impl Fractal {
             green_iter,
             blue_iter,
             color_shift,
+            uniform_factor,
         )
     }
 
@@ -110,6 +113,7 @@ impl Fractal {
         green_iter: u32,
         blue_iter: u32,
         color_shift: Option<u32>,
+        uniform_factor: Option<f64>,
     ) -> Vec<Vec<(u8, u8, u8)>> {
         self.nebulabrot_or_antinebulabrot(
             true,
@@ -118,6 +122,7 @@ impl Fractal {
             green_iter,
             blue_iter,
             color_shift,
+            uniform_factor,
         )
     }
 }

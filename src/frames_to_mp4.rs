@@ -67,8 +67,16 @@ fn digits_in_frame(path: OsString) -> usize {
 
 fn digits_in_last_frame(path: &Path) -> usize {
     let entries: Vec<_> = fs::read_dir(path).unwrap().collect();
-    let last_file_name = entries.last().unwrap().as_ref().unwrap().file_name();
-    return digits_in_frame(last_file_name);
+    let mut max = 0;
+    for entry in entries.iter() {
+        let entry = entry.as_ref().unwrap();
+        let filename = entry.file_name();
+        let digits = digits_in_frame(filename);
+        if digits > max {
+            max = digits;
+        }
+    }
+    return max;
 }
 
 fn resolution_first_frame(path: &Path) -> (u32, u32) {
