@@ -1,3 +1,7 @@
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::declare_interior_mutable_const)]
+#![allow(static_mut_refs)]
+#![allow(clippy::borrow_interior_mutable_const)]
 use std::{
     collections::HashMap,
     fs,

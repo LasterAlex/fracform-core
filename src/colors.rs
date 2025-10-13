@@ -210,10 +210,15 @@ pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, 
             let custom_palette = create_custom_pallete();
             custom_palette[param as usize % custom_palette.len()]
         }
-        PaletteMode::GrayScale { shift, uniform_factor } => {
+        PaletteMode::GrayScale {
+            shift,
+            uniform_factor,
+        } => {
             let gray = min(
                 255,
-                ((param as f64 / shift.unwrap_or(max_param) as f64).powf(uniform_factor.unwrap_or(1.0)) * 255.0)
+                ((param as f64 / shift.unwrap_or(max_param) as f64)
+                    .powf(uniform_factor.unwrap_or(1.0))
+                    * 255.0)
                     .round() as u8,
             );
             (gray, gray, gray)
