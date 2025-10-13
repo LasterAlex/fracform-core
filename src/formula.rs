@@ -12,6 +12,30 @@ pub fn create_formula_project(user_function: &str) -> std::io::Result<bool> {
         r#"#include <complex.h>
 #include <math.h>
 
+// Convenience defines for cleaner syntax
+#define cos(z) ccos(z)
+#define sin(z) csin(z)
+#define tan(z) ctan(z)
+#define acos(z) cacos(z)
+#define asin(z) casin(z)
+#define atan(z) catan(z)
+#define cosh(z) ccosh(z)
+#define sinh(z) csinh(z)
+#define tanh(z) ctanh(z)
+#define acosh(z) cacosh(z)
+#define asinh(z) casinh(z)
+#define atanh(z) catanh(z)
+#define exp(z) cexp(z)
+#define log(z) clog(z)
+#define log10(z) clog10(z)
+#define sqrt(z) csqrt(z)
+#define pow(z, p) cpow(z, p)
+#define abs(z) cabs(z)
+#define arg(z) carg(z)
+#define real(z) creal(z)
+#define imag(z) cimag(z)
+#define conj(z) conj(z)
+
 double complex user_function(double complex z, double complex c) {{
     return {user_function};
 }}

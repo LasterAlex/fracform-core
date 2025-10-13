@@ -215,7 +215,7 @@ fn run() {
     //     offset: None,
     // };
 
-    let formula = "z*z + c";
+    let formula = "sin(z) + c";
     // let fractal_type = FractalType::Nebulabrot {
     //     rounds: 100_000_000,
     //     red_iters: 5000,
