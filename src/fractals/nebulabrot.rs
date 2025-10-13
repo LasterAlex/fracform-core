@@ -56,9 +56,9 @@ impl Fractal {
         let blue_max_param = *blue_tmp[blue_tmp.len() - 100];
         for x in 0..self.width as usize {
             for y in 0..self.height as usize {
-                let hits_red = red_buddha[(x * self.height as usize + y) as usize];
-                let hits_green = green_buddha[(x * self.height as usize + y) as usize];
-                let hits_blue = blue_buddha[(x * self.height as usize + y) as usize];
+                let hits_red = red_buddha[x * self.height as usize + y];
+                let hits_green = green_buddha[x * self.height as usize + y];
+                let hits_blue = blue_buddha[x * self.height as usize + y];
                 let color_red = set_color(
                     hits_red,
                     red_max_param,

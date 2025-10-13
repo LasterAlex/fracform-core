@@ -29,11 +29,11 @@ fn create_file_path(formula: &str) -> PathBuf {
     let fractals_path = Path::new(GENERATED_DIR).join(Path::new(FRACTALS_DIR));
     let sanitized_formula = sanitize_filename(formula.to_string());
     let rand_string = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
-    let filename = format!("{}_{}.png", sanitized_formula, rand_string,);
+    let filename = format!("{sanitized_formula}_{rand_string}.png");
     fractals_path.join(filename.clone())
 }
 
-fn save_bitmap(bitmap: &Vec<Vec<(u8, u8, u8)>>, name: &Path) {
+fn save_bitmap(bitmap: &[Vec<(u8, u8, u8)>], name: &Path) {
     let mut image_buffer =
         ImageBuffer::<Rgb<u8>, Vec<u8>>::new(bitmap.len() as u32, bitmap[0].len() as u32);
 
@@ -47,7 +47,7 @@ fn save_bitmap(bitmap: &Vec<Vec<(u8, u8, u8)>>, name: &Path) {
     image_buffer.save(name).expect("Failed to save image");
 }
 
-fn make_and_save_fractal(fractal: &mut Fractal, fractal_type: FractalType, file_path: &PathBuf) {
+fn make_and_save_fractal(fractal: &mut Fractal, fractal_type: FractalType, file_path: &Path) {
     let color_bitmap;
     if let FractalType::Nebulabrot {
         rounds,
@@ -103,14 +103,15 @@ fn make_animation() {
     // Fractal parameters
     let width = 1000;
     let height = 1000;
-    let zoom = 0.5;
+    let zoom = 0.2;
     let iterations = 1000;
-    let max_abs = 64;
-    let palette_mode = PaletteMode::Smooth {
-        shift: Some(200),
-        offset: None,
-    };
-    let formula = "z - c / (z.powf({factor:.6}) + c)";
+    let max_abs = 1280;
+    // let palette_mode = PaletteMode::Smooth {
+    //     shift: Some(200),
+    //     offset: None,
+    // };
+    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
+    let formula = "(z.sinh() + c + 1.0) / 2.0 + c / (z + {factor:.6})";
     let additional_info = "";
     // let fractal_type = FractalType::Nebulabrot {
     //     rounds: 100_000_000,
@@ -124,11 +125,11 @@ fn make_animation() {
 
     // Animation parameters
     let start_factor = 0.0;
-    let end_factor = 4.0;
-    let frame_count = 500;
+    let end_factor = 1.5;
+    let frame_count = 150;
     let starting_frame = 0; // If the animation is interrupted, set this to the last frame + 1
                             // Set to frame_count + 1 if you want to tweak the fps
-    let fps = 40;
+    let fps = 30;
 
     // Animation generation
     let animation_directory_name = sanitize_filename(
@@ -151,11 +152,11 @@ fn make_animation() {
         factor = f(
             frame as f64,
             0.0,
-            start_factor as f64,
+            start_factor,
             frame_count as f64,
-            end_factor as f64,
+            end_factor,
         );
-        println!("factor: {}", factor);
+        println!("factor: {factor}");
         create_formula_project(
             formula
                 .format(&HashMap::from([("factor".to_string(), factor)]))
@@ -183,7 +184,7 @@ fn make_animation() {
             None,
             palette_mode.clone(),
         );
-        let file = current_animation_directory.join(format!("{}_fractal_animated.png", frame));
+        let file = current_animation_directory.join(format!("{frame}_fractal_animated.png"));
         make_and_save_fractal(&mut fractal, fractal_type.clone(), &file);
     }
     println!("Animation took {:.2?}", start.elapsed());
@@ -195,7 +196,7 @@ fn run() {
     // Parameters
     let width = 1000;
     let height = 1000;
-    let zoom = 0.1;
+    let zoom = 0.5;
     let center_coordinates = Complex::new(0.0, 0.0);
     let iterations = 1000;
 
@@ -203,18 +204,19 @@ fn run() {
     //     shift: None,
     //     uniform_factor: Some(0.5),
     // };
-    // let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
-    let palette_mode = PaletteMode::Smooth {
-        shift: Some(200),
-        offset: None,
-    };
+    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
+    // let palette_mode = PaletteMode::BrownAndBlue;
+    // let palette_mode = PaletteMode::Smooth {
+    //     shift: Some(200),
+    //     offset: None,
+    // };
 
-    let formula = "z - c / (z.powf(1.5) + c)";
+    let formula = "z*z + c";
     // let fractal_type = FractalType::Nebulabrot {
-    //     rounds: 10_000_000,
-    //     red_iters: 1000,
-    //     green_iters: 100,
-    //     blue_iters: 10,
+    //     rounds: 100_000_000,
+    //     red_iters: 5000,
+    //     green_iters: 500,
+    //     blue_iters: 50,
     //     color_shift: None,
     //     uniform_factor: Some(0.9),
     // };
@@ -226,21 +228,21 @@ fn run() {
     let fractal_type = FractalType::Mandelbrot;
     // let fractal_type = FractalType::Julia;
     let c = Complex::new(0.0, 0.0); // Important only for Julia sets
-    let max_abs = 64;
+    let max_abs = 1280;
 
     // Code
     let start = Instant::now();
 
     // This exists to make sure that the library is loaded before the formula is generated
-    if create_formula_project(&formula).expect("Failed to generate Rust code") {
+    if create_formula_project(formula).expect("Failed to generate Rust code") {
         compile_formula_project().expect("Failed to compile Rust code");
     }
     load_library();
     println!("Library loaded in {:.2?}", start.elapsed());
 
     let mut fractal = Fractal::new(
-        width as i32,
-        height as i32,
+        width,
+        height,
         zoom,
         center_coordinates,
         iterations,

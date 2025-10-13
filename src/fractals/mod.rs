@@ -223,13 +223,13 @@ impl Fractal {
         let start = Instant::now();
         for x in 0..self.width as usize {
             for y in 0..self.height as usize {
-                let i = bitmap[(x * self.height as usize + y) as usize];
+                let i = bitmap[x * self.height as usize + y];
                 color_bitmap[x][y] = set_color(i, max_param, self.palette_mode.clone());
             }
         }
         let elapsed = start.elapsed();
 
-        println!("Time taken to color it: {:.2?}", elapsed);
+        println!("Time taken to color it: {elapsed:.2?}");
 
         color_bitmap
     }

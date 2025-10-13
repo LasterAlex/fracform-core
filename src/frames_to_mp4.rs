@@ -55,14 +55,13 @@ fn make_one_last_name(path: &Path, name: &str) {
 }
 
 fn digits_in_frame(path: OsString) -> usize {
-    return path
-        .to_str()
+    path.to_str()
         .unwrap()
         .split("_")
         .collect::<Vec<&str>>()
         .first()
         .unwrap()
-        .len();
+        .len()
 }
 
 fn digits_in_last_frame(path: &Path) -> usize {
@@ -76,7 +75,7 @@ fn digits_in_last_frame(path: &Path) -> usize {
             max = digits;
         }
     }
-    return max;
+    max
 }
 
 fn resolution_first_frame(path: &Path) -> (u32, u32) {
@@ -143,10 +142,9 @@ pub fn make_mp4(path: &Path, fps: u32) {
         name_of_directory(path)
     );
     let command = format!(
-        "ffmpeg -r {} -i \"{}\" -c:v libx264 -s:v {} -r 30 -pix_fmt yuv420p \"{}\"",
-        fps, path_ffmpeg, resolution_str, name_mp4
+        "ffmpeg -r {fps} -i \"{path_ffmpeg}\" -c:v libx264 -s:v {resolution_str} -r 30 -pix_fmt yuv420p \"{name_mp4}\""
     );
-    println!("{}", command);
+    println!("{command}");
     println!("Generating mp4...");
     Command::new("sh")
         .arg("-c")
@@ -157,5 +155,5 @@ pub fn make_mp4(path: &Path, fps: u32) {
     fs::remove_dir_all(tmp_path).unwrap();
     println!("_tmp directory deleted");
     println!("mp4 Ready to watch!");
-    println!("Directory of mp4: {}", name_mp4);
+    println!("Directory of mp4: {name_mp4}");
 }

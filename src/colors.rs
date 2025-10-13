@@ -170,7 +170,7 @@ pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, 
                 (153, 87, 0),
                 (106, 52, 3),
             ];
-            return colors[param as usize % colors.len()];
+            colors[param as usize % colors.len()]
         }
         PaletteMode::Rainbow { offset } => {
             if param >= max_param {
@@ -208,7 +208,7 @@ pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, 
                 return (0, 0, 0);
             }
             let custom_palette = create_custom_pallete();
-            return custom_palette[param as usize % custom_palette.len()];
+            custom_palette[param as usize % custom_palette.len()]
         }
         PaletteMode::GrayScale { shift, uniform_factor } => {
             let gray = min(

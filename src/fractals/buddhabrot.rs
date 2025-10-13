@@ -161,11 +161,11 @@ impl Fractal {
         (0..*JOBS.lock().unwrap())
             .into_par_iter()
             .map(|worker_num| {
-                return self.task_creation_worker(
+                self.task_creation_worker(
                     worker_num as usize,
                     &mandelbrot_bitmap,
                     fractal_type.clone(),
-                );
+                )
             })
             .collect_into_vec(&mut tmp);
         println!(
@@ -173,7 +173,7 @@ impl Fractal {
             tmp.clone().into_iter().flatten().count(),
             start.elapsed()
         );
-        return tmp;
+        tmp
     }
 
     pub fn buddhabrot_or_antibuddhabrot(&self, fractal_type: FractalType) -> Bitmap {
