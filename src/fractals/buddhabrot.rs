@@ -177,6 +177,7 @@ impl Fractal {
     }
 
     pub fn buddhabrot_or_antibuddhabrot(&self, fractal_type: FractalType) -> Bitmap {
+        reset_cache();
         let tasks = self.generate_buddhabrot_tasks(fractal_type.clone());
         let is_antibuddhabrot =
             discriminant(&fractal_type) == discriminant(&FractalType::Antibuddhabrot { rounds: 0 });

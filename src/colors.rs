@@ -5,9 +5,10 @@ use cached::proc_macro::cached;
 
 use crate::fractals::f;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum PaletteMode {
     BrownAndBlue,
+    BlackAndWhite,
     Rainbow {
         offset: Option<u32>,
     },
@@ -171,6 +172,12 @@ pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, 
                 (106, 52, 3),
             ];
             colors[param as usize % colors.len()]
+        }
+        PaletteMode::BlackAndWhite => {
+            if param >= max_param {
+                return (0, 0, 0);
+            }
+            return (255, 255, 255);
         }
         PaletteMode::Rainbow { offset } => {
             if param >= max_param {

@@ -14,6 +14,8 @@ impl Fractal {
         // I could try to make this more efficient, but honestly,
         // it's not worth it, the difference between nebulabrot and buddhabrot is 1.7x.
 
+        reset_cache();
+
         let red_buddha;
         let green_buddha;
         let blue_buddha;

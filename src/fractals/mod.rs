@@ -1,7 +1,7 @@
 pub mod buddhabrot;
 pub mod mandelbrot;
 pub mod nebulabrot;
-use cached::UnboundCache;
+use cached::{Cached, UnboundCache};
 use std::{mem::discriminant, time::Instant};
 
 use cached::proc_macro::cached;
@@ -9,7 +9,7 @@ use cached::proc_macro::cached;
 use num::Complex;
 
 use crate::{
-    colors::{set_color, PaletteMode},
+    colors::{self, set_color, PaletteMode},
     config::MAX_PIXELS,
     formula::execute_function,
 };
@@ -50,9 +50,9 @@ pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
 }
 
 #[cached(  // Speeds up the process A LOT
-    ty = "UnboundCache<i32, f64>",
+    ty = "UnboundCache<(i32, i32, i32), f64>",
     create = "{ UnboundCache::new() }",
-    convert = r#"{ x }"#
+    convert = r#"{ (x, width, height) }"#
 )]
 fn x_to_coord(x: i32, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
     let end_goal; // We need the center of the fractal to not be distorted, so we go with the
@@ -75,9 +75,9 @@ fn x_to_coord(x: i32, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
 }
 
 #[cached(
-    ty = "UnboundCache<i32, f64>",
+    ty = "UnboundCache<(i32, i32, i32), f64>",
     create = "{ UnboundCache::new() }",
-    convert = r#"{ y }"#
+    convert = r#"{ (y, width, height) }"#
 )]
 fn y_to_coord(y: i32, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
     let offset;
@@ -220,17 +220,23 @@ impl Fractal {
             sort(&mut tmp);
             max_param = *tmp[tmp.len() - 100];
         }
-        let start = Instant::now();
+        // let start = Instant::now();
         for x in 0..self.width as usize {
             for y in 0..self.height as usize {
                 let i = bitmap[x * self.height as usize + y];
                 color_bitmap[x][y] = set_color(i, max_param, self.palette_mode.clone());
             }
         }
-        let elapsed = start.elapsed();
+        // let elapsed = start.elapsed();
 
-        println!("Time taken to color it: {elapsed:.2?}");
+        // println!("Time taken to color it: {elapsed:.2?}");
 
         color_bitmap
     }
+}
+
+pub fn reset_cache() {
+    Y_TO_COORD.lock().unwrap().cache_reset();
+    X_TO_COORD.lock().unwrap().cache_reset();
+    colors::SET_COLOR.lock().unwrap().cache_reset();
 }

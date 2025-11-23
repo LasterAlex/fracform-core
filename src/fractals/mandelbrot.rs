@@ -41,6 +41,7 @@ impl Fractal {
     pub fn mandelbrot_or_julia(&self, fractal_type: FractalType) -> Bitmap {
         // To not write the same code twice
         let mut bitmap = [0; MAX_PIXELS as usize]; // Vecs are A LOT slower, cuz heap
+        reset_cache();
         let mut pixels = vec![];
         // Generate all the tasks in the right order beforehand
         for x in 0..self.width {
@@ -57,7 +58,7 @@ impl Fractal {
                 FractalType::Julia => self.julia_worker(&mut bitmap, pixels.clone()),
                 _ => panic!("Invalid fractal type, mandelbrot or julia?"),
             }
-            println!("Time taken to generate: {:.2?}", start.elapsed());
+            // println!("Time taken to generate: {:.2?}", start.elapsed());
             return bitmap;
         }
         let chunk_size = ((self.width * self.height) / jobs_lock as i32) as usize;
@@ -89,7 +90,7 @@ impl Fractal {
                 }
             });
 
-        println!("Time taken to generate: {:.2?}", start.elapsed());
+        // println!("Time taken to generate: {:.2?}", start.elapsed());
 
         bitmap
     }

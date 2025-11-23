@@ -11,11 +11,11 @@ fn filename(deep: i32, file: Option<String>) -> String {
     if deep <= 0 {
         return format!("frac_{}_{}", file, "");
     }
-    let mut rng = rand::thread_rng();
-    if rng.gen_bool(0.5) {
-        file.push(rng.sample(rand::distributions::Alphanumeric) as char);
+    let mut rng = rand::rng();
+    if rng.random_bool(0.5) {
+        file.push(rng.sample(rand::distr::Alphanumeric) as char);
     } else {
-        file.push(rng.gen_range(0..=9).to_string().chars().next().unwrap());
+        file.push(rng.random_range(0..=9).to_string().chars().next().unwrap());
     }
     filename(deep - 1, Some(file))
 }
