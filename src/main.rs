@@ -1,3 +1,4 @@
+#![feature(f128)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::declare_interior_mutable_const)]
 #![allow(static_mut_refs)]
@@ -122,15 +123,31 @@ fn make_and_save_fractal(
     save_bitmap(&color_bitmap, file_path, rotate);
 }
 
+fn smooth_zoom(frame: f64, total_frames: f64, start_zoom: f64, end_zoom: f64) -> f64 {
+    // Normalized time
+    let t = (frame / total_frames).clamp(0.0, 1.0);
+
+    // Smoothstep easing (ease-in, ease-out, monotone)
+    let s = t * t * (3.0 - 2.0 * t);
+
+    // Log-space interpolation (preserves multiplicative zoom)
+    let l0 = start_zoom.ln();
+    let l1 = end_zoom.ln();
+    let l = l0 + (l1 - l0) * s;
+
+    // Back to regular zoom value
+    l.exp()
+}
+
 #[allow(dead_code)]
 fn make_animation() {
     // Fractal parameters
     let width = 1000;
     let height = 1000;
-    let zoom = 0.25;
-    let iterations = 100;
+    let zoom = 0.5;
+    let iterations = 1500;
     let max_abs = 32;
-    let center_coordinates = Complex::new(0.0, 0.0);
+    let center_coordinates = Complex::new(-0.40166125766675564, 0.012480396018771048);
     // let palette_mode = PaletteMode::Smooth {
     //     shift: Some(50),
     //     offset: None,
@@ -139,10 +156,9 @@ fn make_animation() {
     //     shift: None,
     //     uniform_factor: Some(0.5),
     // };
-    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
-    let formula =
-        "((-3.839-z/c)/((c-z)/(-0.238+z)+z)) * {factor:.6} + (z * z + c) * (1 - {factor:.6})";
-    let additional_info = "";
+    let palette_mode = PaletteMode::Rainbow { offset: None };
+    let formula = "-0.032 - pow(pow(c, z + c), cos(z) + -2.459)";
+    let additional_info = "_zoom";
     // let fractal_type = FractalType::Nebulabrot {
     //     rounds: 100_000_000,
     //     red_iters: 1000,
@@ -155,9 +171,9 @@ fn make_animation() {
     // let fractal_type = FractalType::Antibuddhabrot { rounds: 20_000_000 };
 
     // Animation parameters
-    let start_factor = 0.0;
-    let end_factor = 1.4;
-    let frame_count = 700;
+    let start_factor = 0.5;
+    let end_factor = 954229891572.538;
+    let frame_count = 1000;
     let starting_frame = 0; // If the animation is interrupted, set this to the last frame + 1
                             // Set to frame_count + 1 if you want to tweak the fps
     let fps = 30;
@@ -180,13 +196,14 @@ fn make_animation() {
     let start = Instant::now();
     for frame in starting_frame..=frame_count {
         println!("{:.2?}%", frame as f64 / frame_count as f64 * 100.0);
-        factor = f(
-            frame as f64,
-            0.0,
-            start_factor,
-            frame_count as f64,
-            end_factor,
-        );
+        // factor = f(
+        //     frame as f64,
+        //     0.0,
+        //     start_factor,
+        //     frame_count as f64,
+        //     end_factor,
+        // );
+        factor = smooth_zoom(frame as f64, frame_count as f64, start_factor, end_factor);
         println!("factor: {factor}");
         create_formula_project(
             formula
@@ -208,7 +225,7 @@ fn make_animation() {
         fractal = Fractal::new(
             width,
             height,
-            zoom,
+            factor.into(),
             center_coordinates,
             iterations,
             max_abs,
@@ -287,7 +304,7 @@ fn run() {
     // Parameters
     let width = 1000;
     let height = 1000;
-    let zoom = 0.25;
+    let zoom = 0.5;
     let center_coordinates = Complex::new(0.0, 0.0);
     let iterations = 100;
 
@@ -295,16 +312,17 @@ fn run() {
     //     shift: None,
     //     uniform_factor: Some(0.5),
     // };
-    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
+    // let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
     // let palette_mode = PaletteMode::BrownAndBlue;
     // let palette_mode = PaletteMode::Smooth {
     //     shift: Some(50),
     //     offset: None,
     // };
+    let palette_mode = PaletteMode::Custom;
 
     // let formula = &get_random_formula();
     // let formula = "(sinh(asin(z) * z) + (c + real(c) + 0.006) * pow(c + z, c) + (z / (4.01 - z)) * tan(atanh(c)) * (z * z * z * z + c * c) * (c + z - -0.475) + imag(tanh(z))) / pow(1.054, c - z + c - -1.216) + atanh(tan(pow(-0.07, asin(pow(5.004 + -0.635, imag(z))))))";
-    let formula = "(-3.839-z/c)/((c-z)/(-0.238+z)+z)";
+    let formula = "z * z + c";
 
     // let fractal_type = FractalType::Antinebulabrot {
     //     rounds: 100_000_000,

@@ -1,7 +1,12 @@
-use std::mem::discriminant;
+use std::{mem::discriminant, thread};
 
+use num::Complex;
 use rand::{seq::IndexedRandom, Rng};
 use rand_distr::{Distribution, Normal};
+
+use crate::{
+    compare_shadows::is_bitmap_uniform, config::STACK_SIZE, formula::{compile_formula_project, create_formula_project, load_library}, fractals::Fractal, make_fractal
+};
 
 pub fn from_func_notation(expr: Expr) -> String {
     fn f(e: &Expr) -> String {
@@ -134,10 +139,22 @@ fn random_variable(fine_tune: bool) -> Expr {
     let possibilities = vec![
         (Expr::Var("z".to_string()), 20.0 * fine_tune_mult),
         (Expr::Var("c".to_string()), 20.0 * fine_tune_mult),
-        (Expr::Imag(Box::new(Expr::Var("z".to_string()))), 1.0 * fine_tune_mult),
-        (Expr::Real(Box::new(Expr::Var("z".to_string()))), 1.0 * fine_tune_mult),
-        (Expr::Imag(Box::new(Expr::Var("c".to_string()))), 1.0 * fine_tune_mult),
-        (Expr::Real(Box::new(Expr::Var("c".to_string()))), 1.0 * fine_tune_mult),
+        (
+            Expr::Imag(Box::new(Expr::Var("z".to_string()))),
+            1.0 * fine_tune_mult,
+        ),
+        (
+            Expr::Real(Box::new(Expr::Var("z".to_string()))),
+            1.0 * fine_tune_mult,
+        ),
+        (
+            Expr::Imag(Box::new(Expr::Var("c".to_string()))),
+            1.0 * fine_tune_mult,
+        ),
+        (
+            Expr::Real(Box::new(Expr::Var("c".to_string()))),
+            1.0 * fine_tune_mult,
+        ),
         (Expr::Num(gaussian_in_range(10.0)), 20.0),
     ];
 
@@ -394,7 +411,111 @@ pub fn get_random_formula() -> String {
         x = adjust_random_param(x, false);
     }
 
+    let mut x_state = has_z_and_c(x.clone(), false, false);
+
+    while !x_state.0 || !x_state.1 || check_is_fractal_monotone(from_func_notation(x.clone())) {
+        x = adjust_random_param(x, false);
+        x_state = has_z_and_c(x.clone(), false, false);
+    }
+
     return from_func_notation(x);
+}
+
+fn has_z_and_c(expr: Expr, has_z: bool, has_c: bool) -> (bool, bool) {
+    if has_z && has_c {
+        return (true, true);
+    }
+
+    match expr {
+        // Binary
+        Expr::Add(a, b) => {
+            let (has_z_1, has_c_1) = has_z_and_c(*a, has_z, has_c);
+            let (has_z_2, has_c_2) = has_z_and_c(*b, has_z, has_c);
+
+            (has_z_1 || has_z_2, has_c_1 || has_c_2)
+        }
+        Expr::Mul(a, b) => {
+            let (has_z_1, has_c_1) = has_z_and_c(*a, has_z, has_c);
+            let (has_z_2, has_c_2) = has_z_and_c(*b, has_z, has_c);
+
+            (has_z_1 || has_z_2, has_c_1 || has_c_2)
+        }
+        Expr::Sub(a, b) => {
+            let (has_z_1, has_c_1) = has_z_and_c(*a, has_z, has_c);
+            let (has_z_2, has_c_2) = has_z_and_c(*b, has_z, has_c);
+
+            (has_z_1 || has_z_2, has_c_1 || has_c_2)
+        }
+        Expr::Div(a, b) => {
+            let (has_z_1, has_c_1) = has_z_and_c(*a, has_z, has_c);
+            let (has_z_2, has_c_2) = has_z_and_c(*b, has_z, has_c);
+
+            (has_z_1 || has_z_2, has_c_1 || has_c_2)
+        }
+        Expr::Pow(a, b) => {
+            let (has_z_1, has_c_1) = has_z_and_c(*a, has_z, has_c);
+            let (has_z_2, has_c_2) = has_z_and_c(*b, has_z, has_c);
+
+            (has_z_1 || has_z_2, has_c_1 || has_c_2)
+        }
+
+        // Unary (all)
+        Expr::Imag(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Real(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Abs(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Exp(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Log(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Log10(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Sqrt(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Cos(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Sin(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Tan(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Acos(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Asin(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Atan(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Cosh(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Sinh(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Tanh(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Acosh(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Asinh(x) => has_z_and_c(*x, has_z, has_c),
+        Expr::Atanh(x) => has_z_and_c(*x, has_z, has_c),
+
+        Expr::Num(_x) => (has_z, has_c),
+        Expr::Var(x) => (has_z || x == "z", has_c || x == "c"),
+    }
+}
+
+fn check_is_fractal_monotone(formula: String) -> bool {
+    if create_formula_project(&formula).expect("Failed to generate Rust code") {
+        compile_formula_project().expect("Failed to compile Rust code");
+    }
+    load_library();
+    let mut fractal = Fractal::new(
+        50,
+        50,
+        0.5,
+        Complex::new(0.0, 0.0),
+        100,
+        32,
+        None,
+        crate::colors::PaletteMode::BlackAndWhite,
+    );
+    let child = thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(move || make_fractal(&mut fractal, crate::fractals::FractalType::Mandelbrot))
+        .unwrap();
+
+    let bitmap = child.join().unwrap();
+
+    for x in 0..bitmap.len() {
+        for y in 0..bitmap[0].len() {
+            if bitmap[x][y] != (0, 0, 0) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 #[cfg(test)]

@@ -54,7 +54,7 @@ pub fn f(x: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     create = "{ UnboundCache::new() }",
     convert = r#"{ (x, width, height) }"#
 )]
-fn x_to_coord(x: i32, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
+pub fn x_to_coord(x: i32, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
     let end_goal; // We need the center of the fractal to not be distorted, so we go with the
                   // minimum of the width and height, to preserve all of the fractal in the image
     let offset; // To center the image
@@ -79,7 +79,7 @@ fn x_to_coord(x: i32, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
     create = "{ UnboundCache::new() }",
     convert = r#"{ (y, width, height) }"#
 )]
-fn y_to_coord(y: i32, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
+pub fn y_to_coord(y: i32, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
     let offset;
     let end_goal;
     if height > width {
@@ -98,7 +98,7 @@ fn y_to_coord(y: i32, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
     )
 }
 
-fn x_coord_to_pix(x: f64, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
+pub fn x_coord_to_pix(x: f64, width: i32, height: i32, shift_x: f64, zoom: f64) -> f64 {
     let end_goal;
     let offset;
     if width > height {
@@ -117,7 +117,7 @@ fn x_coord_to_pix(x: f64, width: i32, height: i32, shift_x: f64, zoom: f64) -> f
     ) + offset
 }
 
-fn y_coord_to_pix(y: f64, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
+pub fn y_coord_to_pix(y: f64, width: i32, height: i32, shift_y: f64, zoom: f64) -> f64 {
     let offset;
     let end_goal;
     if height > width {

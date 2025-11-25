@@ -5,6 +5,8 @@ use std::thread;
 
 use crate::config::STACK_SIZE;
 use crate::formula::{compile_formula_project, create_formula_project, load_library};
+use crate::fractals::{x_to_coord, y_to_coord};
+use crate::random_formula::get_random_formula;
 use crate::{
     colors::PaletteMode,
     fractals::{Fractal, FractalType},
@@ -52,9 +54,14 @@ struct FracformApp {
     fractal_receiver: Option<mpsc::Receiver<Vec<Vec<(u8, u8, u8)>>>>,
     julia_thread: Option<thread::JoinHandle<()>>,
     julia_receiver: Option<mpsc::Receiver<Vec<Vec<(u8, u8, u8)>>>>,
+
+    // Selection fields
+    selecting: bool,
+    select_start: egui::Pos2,
+    select_end: egui::Pos2,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 struct FractalParams {
     jobs: i32,
     width: i32,
@@ -68,6 +75,23 @@ struct FractalParams {
     abs_z: u32,
 }
 
+impl Default for FractalParams {
+    fn default() -> Self {
+        Self {
+            jobs: 16,
+            width: 1000,
+            height: 1000,
+            zoom: 0.5,
+            cx: 0.0,
+            cy: 0.0,
+            movex: 0.0,
+            movey: 0.0,
+            iterations: 100,
+            abs_z: 32,
+        }
+    }
+}
+
 struct MiniJuliaData {
     params: FractalParams,
     image_state: ImageState,
@@ -77,19 +101,11 @@ struct MiniJuliaData {
 
 impl Default for MiniJuliaData {
     fn default() -> Self {
+        let mut params = FractalParams::default();
+        params.width = 500;
+        params.height = 500;
         Self {
-            params: FractalParams {
-                width: 500,
-                height: 500,
-                zoom: 0.5,
-                cx: 0.0,
-                cy: 0.0,
-                movex: 0.0,
-                movey: 0.0,
-                iterations: 100,
-                abs_z: 32,
-                ..Default::default()
-            },
+            params,
             image_state: ImageState::NoImage,
             fractal_image: None,
             fractal_texture: None,
@@ -99,15 +115,11 @@ impl Default for MiniJuliaData {
 
 impl FracformApp {
     fn new() -> Self {
+        let mut params = FractalParams::default();
+        params.width = 1000;
+        params.height = 1000;
         Self {
-            params: FractalParams {
-                width: 1000,
-                height: 1000,
-                iterations: 100,
-                abs_z: 32,
-                zoom: 0.5,
-                ..Default::default()
-            },
+            params,
             fractal_type: FractalType::Mandelbrot,
             palette: PaletteMode::Rainbow { offset: None },
             formula: "z * z + c".to_string(),
@@ -119,6 +131,9 @@ impl FracformApp {
             fractal_receiver: None,
             julia_thread: None,
             julia_receiver: None,
+            selecting: false,
+            select_start: egui::Pos2::ZERO,
+            select_end: egui::Pos2::ZERO,
         }
     }
 
@@ -144,6 +159,9 @@ impl FracformApp {
                     &mut self.fractal_texture,
                     "fractal_texture",
                 );
+            } else {
+                // Request repaint to keep checking while generating
+                ctx.request_repaint();
             }
         }
 
@@ -169,6 +187,9 @@ impl FracformApp {
                     &mut self.mini_julia.fractal_texture,
                     "julia_texture",
                 );
+            } else {
+                // Request repaint to keep checking while generating
+                ctx.request_repaint();
             }
         }
     }
@@ -206,6 +227,10 @@ impl FracformApp {
     }
 
     fn start_fractal_generation(&mut self) {
+        if self.fractal_thread.is_some() {
+            return
+        }
+
         let (tx, rx) = mpsc::channel();
 
         let params = self.params.clone();
@@ -239,6 +264,10 @@ impl FracformApp {
     }
 
     fn start_mini_julia_generation(&mut self) {
+        if self.julia_thread.is_some() {
+            return
+        }
+
         let (tx, rx) = mpsc::channel();
 
         let params = self.mini_julia.params.clone();
@@ -397,6 +426,15 @@ impl FracformApp {
                             &mut self.params.movex,
                             &mut self.params.movey,
                         );
+
+                        if ui.button("Reset zoom").clicked() {
+                            let defaults = FractalParams::default();
+                            self.params.zoom = defaults.zoom;
+                            self.params.movex = defaults.movex;
+                            self.params.movey = defaults.movey;
+
+                            self.start_fractal_generation();
+                        }
                     });
 
                     Self::show_collapsible_section(ui, "Fractal Parameters", false, |ui| {
@@ -411,6 +449,10 @@ impl FracformApp {
                                 egui::TextEdit::singleline(&mut self.formula).desired_width(150.0),
                             );
                         });
+                        if ui.button("Random formula").clicked() {
+                            self.formula = get_random_formula();
+                            self.start_fractal_generation();
+                        }
                     });
 
                     ui.add_space(12.0);
@@ -425,7 +467,7 @@ impl FracformApp {
             });
     }
 
-    fn show_image_panel(&self, ui: &mut egui::Ui) {
+    fn show_image_panel(&mut self, ui: &mut egui::Ui) {
         egui::Frame::none()
             .inner_margin(egui::Margin::symmetric(8.0, 8.0))
             .show(ui, |ui| {
@@ -433,13 +475,34 @@ impl FracformApp {
                     ui.heading("Preview");
                     ui.add_space(8.0);
 
-                    Self::show_main_image_preview(
+                    if let Some(double_click) = self.show_main_image_preview(
                         ui,
-                        &self.image_state,
-                        &self.fractal_texture,
+                        self.image_state.clone(),
+                        self.fractal_texture.clone(),
                         self.params.width,
                         self.params.height,
-                    );
+                    ) {
+                        let x_coord = x_to_coord(
+                            double_click.x as i32,
+                            self.params.width,
+                            self.params.height,
+                            self.params.movex,
+                            self.params.zoom,
+                        );
+                        let y_coord = y_to_coord(
+                            double_click.y as i32,
+                            self.params.width,
+                            self.params.height,
+                            self.params.movey,
+                            self.params.zoom,
+                        );
+                        self.mini_julia.params.cx = x_coord;
+                        self.mini_julia.params.cy = y_coord;
+                        self.mini_julia.params.zoom = 0.5;
+                        self.mini_julia.params.movex = 0.0;
+                        self.mini_julia.params.movey = 0.0;
+                        self.start_mini_julia_generation();
+                    }
                 });
             });
     }
@@ -474,42 +537,169 @@ impl FracformApp {
     }
 
     fn show_main_image_preview(
+        &mut self,
         ui: &mut egui::Ui,
-        state: &ImageState,
-        texture: &Option<egui::TextureHandle>,
+        state: ImageState,
+        texture: Option<egui::TextureHandle>,
         width: i32,
         height: i32,
-    ) {
+    ) -> Option<egui::Vec2> {
+        let mut double_click_pos = None;
+
         egui::Frame::canvas(ui.style()).show(ui, |ui| {
             ui.set_min_size(egui::vec2(400.0, 400.0));
             ui.set_max_size(egui::vec2(600.0, 600.0));
+
             ui.centered_and_justified(|ui| match state {
                 ImageState::Done => {
                     if let Some(texture) = texture {
-                        let available_size = ui.available_size();
+                        let available = ui.available_size();
                         let image_size = egui::vec2(width as f32, height as f32);
-                        let scale = (available_size.x / image_size.x)
-                            .min(available_size.y / image_size.y)
-                            .min(1.0);
+
+                        let scale = available.x.min(available.y) / image_size.x.max(image_size.y);
                         let display_size = image_size * scale;
-                        ui.add(egui::Image::new(texture).fit_to_exact_size(display_size));
+
+                        let (rect, response) =
+                            ui.allocate_exact_size(display_size, egui::Sense::click_and_drag());
+
+                        ui.painter().image(
+                            texture.id(),
+                            rect,
+                            egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::new(1.0, 1.0)),
+                            egui::Color32::WHITE,
+                        );
+
+                        // -------------------------
+                        // Crosshair OR selection-center marker
+                        // -------------------------
+
+                        if self.selecting {
+                            let center_pos = (self.select_start + self.select_end.to_vec2()) * 0.5;
+                            let half = 3.0;
+                            let marker_rect = egui::Rect::from_min_max(
+                                egui::pos2(center_pos.x - half, center_pos.y - half),
+                                egui::pos2(center_pos.x + half, center_pos.y + half),
+                            );
+                            ui.painter().rect_stroke(
+                                marker_rect,
+                                0.0,
+                                egui::Stroke::new(1.0, egui::Color32::WHITE),
+                            );
+                        }
+
+                        // -------------------------
+                        // Mouse interaction
+                        // -------------------------
+                        if response.double_clicked() {
+                            if let Some(pos) = response.interact_pointer_pos() {
+                                let image_pos = (pos - rect.min) / scale;
+                                double_click_pos = Some(image_pos);
+                            }
+                        }
+
+                        if response.drag_started() {
+                            if let Some(mouse) = response.interact_pointer_pos() {
+                                self.selecting = true;
+                                self.select_start = mouse;
+                                self.select_end = mouse;
+                            }
+                        }
+
+                        // if self.selecting && response.dragged() {
+                        //     if let Some(mouse) = response.interact_pointer_pos() {
+                        //         let aspect = self.params.width as f32 / self.params.height as f32;
+                        //         self.select_end =
+                        //             Self::enforce_aspect_ratio(self.select_start, mouse, aspect);
+                        //     }
+                        // }
+                        if self.selecting && response.dragged() {
+                            if let Some(mouse) = response.interact_pointer_pos() {
+                                self.select_end = mouse;
+                            }
+                        }
+
+                        if self.selecting && response.drag_stopped() {
+                            self.selecting = false;
+
+                            // Convert selection rect to image coordinates
+                            let p1 = (self.select_start - rect.min) / scale;
+                            let p2 = (self.select_end - rect.min) / scale;
+
+                            let min = egui::Vec2::new(p1.x.min(p2.x), p1.y.min(p2.y));
+                            let max = egui::Vec2::new(p1.x.max(p2.x), p1.y.max(p2.y));
+
+                            self.start_zoom(min.x, min.y, max.x, max.y);
+                        }
+
+                        // -------------------------
+                        // Draw selection rectangle
+                        // -------------------------
+                        if self.selecting {
+                            let r = egui::Rect::from_two_pos(self.select_start, self.select_end);
+                            ui.painter().rect_stroke(
+                                r,
+                                0.0,
+                                egui::Stroke::new(1.0, egui::Color32::GREEN),
+                            );
+                        }
                     }
                 }
                 ImageState::Generating => {
-                    ui.label(
-                        egui::RichText::new("Generating fractal...").color(egui::Color32::YELLOW),
-                    );
+                    ui.label("Generating fractal…");
                 }
                 ImageState::NoImage => {
-                    ui.label(
-                        egui::RichText::new(
-                            "No image generated yet.\nClick 'Generate Fractal' to start.",
-                        )
-                        .color(egui::Color32::DARK_GRAY),
-                    );
+                    ui.label("No image generated.");
                 }
             });
         });
+
+        double_click_pos
+    }
+
+    fn start_zoom(&mut self, top_x: f32, top_y: f32, bottom_x: f32, bottom_y: f32) {
+        let height = (bottom_y - top_y).abs();
+        let width = (bottom_x - top_x).abs();
+        if height.min(width) < 30.0 {
+            return;
+        }
+
+        let width = self.params.width;
+        let height = self.params.height;
+        let shift_x = self.params.movex;
+        let shift_y = self.params.movey;
+        let zoom = self.params.zoom;
+
+        let top_x_coord = x_to_coord(top_x as i32, width, height, shift_x, zoom);
+        let top_y_coord = y_to_coord(top_y as i32, width, height, shift_y, zoom);
+
+        let bottom_x_coord = x_to_coord(bottom_x as i32, width, height, shift_x, zoom);
+        let bottom_y_coord = y_to_coord(bottom_y as i32, width, height, shift_y, zoom);
+
+        let new_shift_x = (bottom_x_coord + top_x_coord) / 2.0;
+        let new_shift_y = (bottom_y_coord + top_y_coord) / 2.0;
+
+        let image_width = (x_to_coord(width, width, height, shift_x, zoom)
+            - x_to_coord(0, width, height, shift_x, zoom))
+        .abs();
+
+        let image_height = (y_to_coord(height, width, height, shift_y, zoom)
+            - y_to_coord(0, width, height, shift_y, zoom))
+        .abs();
+
+        let new_width = (bottom_x_coord - top_x_coord).abs();
+        let new_height = (bottom_y_coord - top_y_coord).abs();
+
+        let new_zoom = if new_width > new_height {
+            image_width / new_width * zoom
+        } else {
+            image_height / new_height * zoom
+        };
+
+        self.params.movex = new_shift_x;
+        self.params.movey = new_shift_y;
+        self.params.zoom = new_zoom;
+
+        self.start_fractal_generation();
     }
 
     fn show_fractal_params_ui(ui: &mut egui::Ui, params: &mut FractalParams, max_size: i32) {
@@ -775,13 +965,13 @@ fn aligned_numeric_field(ui: &mut egui::Ui, label: &str, value: &mut i32) {
                 d.get_temp::<String>(id)
                     .unwrap_or_else(|| value.to_string())
             });
-            
+
             let response = ui.add(egui::TextEdit::singleline(&mut buf).desired_width(80.0));
-            
+
             if let Ok(v) = buf.parse::<i32>() {
                 *value = v;
             }
-            
+
             // Store buffer if focused, otherwise reset to actual value
             if response.has_focus() {
                 ui.data_mut(|d| d.insert_temp(id, buf));
@@ -801,13 +991,13 @@ fn aligned_numeric_field_u32(ui: &mut egui::Ui, label: &str, value: &mut u32) {
                 d.get_temp::<String>(id)
                     .unwrap_or_else(|| value.to_string())
             });
-            
+
             let response = ui.add(egui::TextEdit::singleline(&mut buf).desired_width(80.0));
-            
+
             if let Ok(v) = buf.parse::<u32>() {
                 *value = v;
             }
-            
+
             if response.has_focus() {
                 ui.data_mut(|d| d.insert_temp(id, buf));
             } else {
@@ -826,19 +1016,19 @@ fn aligned_optional_u32(ui: &mut egui::Ui, label: &str, value: &mut Option<u32>)
                 d.get_temp::<String>(id)
                     .unwrap_or_else(|| value.map_or(String::new(), |v| v.to_string()))
             });
-            
+
             let response = ui.add(
                 egui::TextEdit::singleline(&mut buf)
                     .hint_text("None")
                     .desired_width(80.0),
             );
-            
+
             if buf.is_empty() {
                 *value = None;
             } else if let Ok(v) = buf.parse::<u32>() {
                 *value = Some(v);
             }
-            
+
             if response.has_focus() {
                 ui.data_mut(|d| d.insert_temp(id, buf));
             } else {
@@ -857,19 +1047,19 @@ fn aligned_optional_f64(ui: &mut egui::Ui, label: &str, value: &mut Option<f64>)
                 d.get_temp::<String>(id)
                     .unwrap_or_else(|| value.map_or(String::new(), |v| v.to_string()))
             });
-            
+
             let response = ui.add(
                 egui::TextEdit::singleline(&mut buf)
                     .hint_text("None")
                     .desired_width(80.0),
             );
-            
+
             if buf.is_empty() {
                 *value = None;
             } else if let Ok(v) = buf.parse::<f64>() {
                 *value = Some(v);
             }
-            
+
             if response.has_focus() {
                 ui.data_mut(|d| d.insert_temp(id, buf));
             } else {
@@ -888,13 +1078,13 @@ fn aligned_float_field(ui: &mut egui::Ui, label: &str, value: &mut f64) {
                 d.get_temp::<String>(id)
                     .unwrap_or_else(|| value.to_string())
             });
-            
+
             let response = ui.add(egui::TextEdit::singleline(&mut buf).desired_width(80.0));
-            
+
             if let Ok(v) = buf.parse::<f64>() {
                 *value = v;
             }
-            
+
             if response.has_focus() {
                 ui.data_mut(|d| d.insert_temp(id, buf));
             } else {
@@ -913,31 +1103,31 @@ fn aligned_double_float_field(ui: &mut egui::Ui, label: &str, value1: &mut f64, 
                 d.get_temp::<String>(id2)
                     .unwrap_or_else(|| value2.to_string())
             });
-            
+
             let response2 = ui.add(egui::TextEdit::singleline(&mut buf2).desired_width(60.0));
-            
+
             if let Ok(v) = buf2.parse::<f64>() {
                 *value2 = v;
             }
-            
+
             if response2.has_focus() {
                 ui.data_mut(|d| d.insert_temp(id2, buf2));
             } else {
                 ui.data_mut(|d| d.remove::<String>(id2));
             }
-            
+
             let id1 = ui.id().with(label).with("field1");
             let mut buf1 = ui.data_mut(|d| {
                 d.get_temp::<String>(id1)
                     .unwrap_or_else(|| value1.to_string())
             });
-            
+
             let response1 = ui.add(egui::TextEdit::singleline(&mut buf1).desired_width(60.0));
-            
+
             if let Ok(v) = buf1.parse::<f64>() {
                 *value1 = v;
             }
-            
+
             if response1.has_focus() {
                 ui.data_mut(|d| d.insert_temp(id1, buf1));
             } else {

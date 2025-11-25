@@ -81,54 +81,33 @@ impl ColorHSV {
     }
 }
 
-fn create_palette(lst_of_colors_hsv: Vec<ColorHSV>, length: usize) -> Vec<(u8, u8, u8)> {
-    // Needs some updating, legacy code
-    let mut y = Vec::new();
-    let len_segment = length / lst_of_colors_hsv.len();
-    let mut lst = lst_of_colors_hsv.clone();
-    lst.pop();
-
-    for (i, color) in lst.iter().enumerate() {
-        for j in 0..len_segment {
-            let next_color = &lst_of_colors_hsv[i + 1];
-            let g = ColorHSV::new(
-                f(j as f64, 0.0, color.hue, len_segment as f64, next_color.hue),
-                f(
-                    j as f64,
-                    0.0,
-                    color.saturation,
-                    len_segment as f64,
-                    next_color.saturation,
-                ),
-                f(
-                    j as f64,
-                    0.0,
-                    color.lightness,
-                    len_segment as f64,
-                    next_color.lightness,
-                ),
-            );
-            y.push(hsl_to_rgb(g));
-        }
-    }
-
-    y
+#[inline]
+fn lerp(a: u8, b: u8, t: f32) -> u8 {
+    (a as f32 + (b as f32 - a as f32) * t).round() as u8
 }
 
-#[cached]
-fn create_custom_pallete() -> Vec<(u8, u8, u8)> {
-    // Needs some updating, legacy code
-    create_palette(
-        vec![
-            ColorHSV::new(342.0, 92.0, 71.0),
-            ColorHSV::new(342.0, 0.0, 100.0),
-            ColorHSV::new(205.0, 63.0, 95.0),
-            ColorHSV::new(92.0, 61.0, 90.0),
-            ColorHSV::new(53.0, 80.0, 100.0),
-            ColorHSV::new(342.0 - 360.0, 92.0, 71.0),
-        ],
-        50,
-    )
+pub fn generate_palette(key_colors: Vec<(u8, u8, u8)>, palette_len: usize) -> Vec<(u8, u8, u8)> {
+    let n = key_colors.len();
+    assert!(n >= 2, "At least two key colors required");
+
+    let mut palette = Vec::with_capacity(palette_len);
+
+    for i in 0..palette_len {
+        // Normalized position along the palette [0..1)
+        let pos = i as f32 / palette_len as f32;
+
+        // Map pos into the segment between two key colors
+        let segment = pos * n as f32;
+        let idx = segment.floor() as usize % n;
+        let t = segment - segment.floor();
+
+        let (r1, g1, b1) = key_colors[idx];
+        let (r2, g2, b2) = key_colors[(idx + 1) % n];
+
+        palette.push((lerp(r1, r2, t), lerp(g1, g2, t), lerp(b1, b2, t)));
+    }
+
+    palette
 }
 
 fn iters_to_color(iters: u32, max_iterations: u32, offset: u32) -> (u8, u8, u8) {
@@ -214,7 +193,17 @@ pub fn set_color(param: u32, max_param: u32, palette_mode: PaletteMode) -> (u8, 
             if param >= max_param {
                 return (0, 0, 0);
             }
-            let custom_palette = create_custom_pallete();
+            let custom_palette = generate_palette(
+                vec![
+                    (34, 67, 76),
+                    (115, 106, 76),
+                    (155, 117, 76),
+                    (141, 103, 76),
+                    (134, 61, 76),
+                    (197, 181, 76),
+                ],
+                100,
+            );
             custom_palette[param as usize % custom_palette.len()]
         }
         PaletteMode::GrayScale {
