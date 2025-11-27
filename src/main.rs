@@ -31,6 +31,7 @@ pub mod frames_to_mp4;
 pub mod random_formula;
 pub mod train;
 pub mod ui;
+pub mod gpu_engine;
 
 fn sanitize_filename(name: String) -> String {
     let mut sanitized_formula = name.replace(" ", "").replace("/", "÷").replace("*", "×");
@@ -145,9 +146,9 @@ fn make_animation() {
     let width = 1000;
     let height = 1000;
     let zoom = 0.5;
-    let iterations = 1500;
+    let iterations = 500;
     let max_abs = 32;
-    let center_coordinates = Complex::new(-0.40166125766675564, 0.012480396018771048);
+    let center_coordinates = Complex::new(-1.6481003600666417, 0.003222726636759382);
     // let palette_mode = PaletteMode::Smooth {
     //     shift: Some(50),
     //     offset: None,
@@ -156,8 +157,9 @@ fn make_animation() {
     //     shift: None,
     //     uniform_factor: Some(0.5),
     // };
-    let palette_mode = PaletteMode::Rainbow { offset: None };
-    let formula = "-0.032 - pow(pow(c, z + c), cos(z) + -2.459)";
+    // let palette_mode = PaletteMode::Rainbow { offset: None };
+    let palette_mode = PaletteMode::Custom;
+    let formula = "sinh(pow(z + z, pow(c, c) / (-4.359 / -3.29) - pow(c * (z + 3.111), 4.533)) + c)";
     let additional_info = "_zoom";
     // let fractal_type = FractalType::Nebulabrot {
     //     rounds: 100_000_000,
@@ -172,7 +174,7 @@ fn make_animation() {
 
     // Animation parameters
     let start_factor = 0.5;
-    let end_factor = 954229891572.538;
+    let end_factor = 23883788181692.0;
     let frame_count = 1000;
     let starting_frame = 0; // If the animation is interrupted, set this to the last frame + 1
                             // Set to frame_count + 1 if you want to tweak the fps
@@ -277,11 +279,11 @@ fn train_fractal() {
     let start = Instant::now();
 
     // This exists to make sure that the library is loaded before the formula is generated
-    if create_formula_project(formula).expect("Failed to generate Rust code") {
-        compile_formula_project().expect("Failed to compile Rust code");
-    }
-    load_library();
-    println!("Library loaded in {:.2?}", start.elapsed());
+    // if create_formula_project(formula).expect("Failed to generate Rust code") {
+    //     compile_formula_project().expect("Failed to compile Rust code");
+    // }
+    // load_library();
+    // println!("Library loaded in {:.2?}", start.elapsed());
 
     let mut fractal = Fractal::new(
         width,
@@ -306,7 +308,7 @@ fn run() {
     let height = 1000;
     let zoom = 0.5;
     let center_coordinates = Complex::new(0.0, 0.0);
-    let iterations = 100;
+    let iterations = 1000000;
 
     // let palette_mode = PaletteMode::GrayScale {
     //     shift: None,
@@ -322,7 +324,7 @@ fn run() {
 
     // let formula = &get_random_formula();
     // let formula = "(sinh(asin(z) * z) + (c + real(c) + 0.006) * pow(c + z, c) + (z / (4.01 - z)) * tan(atanh(c)) * (z * z * z * z + c * c) * (c + z - -0.475) + imag(tanh(z))) / pow(1.054, c - z + c - -1.216) + atanh(tan(pow(-0.07, asin(pow(5.004 + -0.635, imag(z))))))";
-    let formula = "z * z + c";
+    let formula = "cos(z) + c";
 
     // let fractal_type = FractalType::Antinebulabrot {
     //     rounds: 100_000_000,

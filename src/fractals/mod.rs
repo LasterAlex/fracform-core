@@ -224,7 +224,7 @@ impl Fractal {
         for x in 0..self.width as usize {
             for y in 0..self.height as usize {
                 let i = bitmap[x * self.height as usize + y];
-                color_bitmap[x][y] = set_color(i, max_param, self.palette_mode.clone());
+                color_bitmap[y][x] = set_color(i, max_param, self.palette_mode.clone());
             }
         }
         // let elapsed = start.elapsed();

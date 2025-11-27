@@ -1,7 +1,10 @@
 use rayon::prelude::*;
 use std::time::Instant;
 
-use crate::config::{JOBS, MAX_PIXELS};
+use crate::{
+    config::{JOBS, MAX_PIXELS},
+    gpu_engine::{self, ensure_wgpu, GPU_STATE},
+};
 
 use super::*;
 
@@ -96,10 +99,24 @@ impl Fractal {
     }
 
     pub fn mandelbrot(&self) -> Bitmap {
-        self.mandelbrot_or_julia(FractalType::Mandelbrot)
+        // let b = self.mandelbrot_or_julia(FractalType::Mandelbrot);
+        let formula = "z * z + c";
+        let mut st = GPU_STATE.lock().unwrap();
+        let (device, queue) = ensure_wgpu(&mut st);
+        let start = Instant::now();
+        let b = gpu_engine::render_mandelbrot(self, formula, device, queue);
+        dbg!(start.elapsed());
+        b
     }
 
     pub fn julia(&self) -> Bitmap {
-        self.mandelbrot_or_julia(FractalType::Julia)
+        // let b = self.mandelbrot_or_julia(FractalType::Julia);
+        let formula = "z * z + c";
+        let mut st = GPU_STATE.lock().unwrap();
+        let (device, queue) = ensure_wgpu(&mut st);
+        let start = Instant::now();
+        let b = gpu_engine::render_julia(self, formula, device, queue);
+        dbg!(start.elapsed());
+        b
     }
 }
