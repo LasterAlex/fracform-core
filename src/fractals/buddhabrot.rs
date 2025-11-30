@@ -5,7 +5,7 @@ use std::{
     time::Instant,
 };
 
-use crate::{config::{JOBS, MAX_PIXELS, WRITE_TO_BITMAP_LEN_THRESHOLD}};
+use crate::{buddha_gpu::render_buddhabrot_gpu, config::{JOBS, MAX_PIXELS, WRITE_TO_BITMAP_LEN_THRESHOLD}, gpu_engine::GPU_STATE};
 
 use super::*;
 
@@ -150,12 +150,12 @@ impl Fractal {
         task_buf
     }
 
-    fn generate_buddhabrot_tasks(&self, fractal_type: FractalType) -> Vec<Vec<Complex<f64>>> {
+    fn generate_buddhabrot_tasks(&self, fractal_type: FractalType, formula: &str) -> Vec<Vec<Complex<f64>>> {
         // For optimization, we first generate a mandelbrot set, and only then generate the
         // buddhabrot, excluding the points that are in the set (or including them if we want
         // antibuddhabrot).
         
-        let mandelbrot_bitmap = self.clone().mandelbrot("z * z + c"); // REPLACE WITH ACTUAL
+        let mandelbrot_bitmap = self.clone().mandelbrot(formula); // REPLACE WITH ACTUAL
         // FORMULA
         let start = Instant::now();
 
@@ -178,9 +178,9 @@ impl Fractal {
         tmp
     }
 
-    pub fn buddhabrot_or_antibuddhabrot(&self, fractal_type: FractalType) -> Bitmap {
+    pub fn buddhabrot_or_antibuddhabrot(&self, fractal_type: FractalType, formula: &str) -> Bitmap {
         reset_cache();
-        let tasks = self.generate_buddhabrot_tasks(fractal_type.clone());
+        let tasks = self.generate_buddhabrot_tasks(fractal_type.clone(), formula);
         let is_antibuddhabrot =
             discriminant(&fractal_type) == discriminant(&FractalType::Antibuddhabrot { rounds: 0 });
 
@@ -202,11 +202,17 @@ impl Fractal {
         return *buddhabrot_bitmap.lock().unwrap();
     }
 
-    pub fn buddhabrot(&self, rounds: u32) -> Bitmap {
-        self.buddhabrot_or_antibuddhabrot(FractalType::Buddhabrot { rounds })
+    pub fn buddhabrot(&self, rounds: u32, formula: &str) -> Bitmap {
+        // let b = self.buddhabrot_or_antibuddhabrot(FractalType::Buddhabrot { rounds }, formula);
+        let st = GPU_STATE.lock().unwrap();
+        let b = render_buddhabrot_gpu(self, formula, rounds, false, st.device.as_ref().unwrap(), st.queue.as_ref().unwrap());
+        b
     }
 
-    pub fn antibuddhabrot(&self, rounds: u32) -> Bitmap {
-        self.buddhabrot_or_antibuddhabrot(FractalType::Antibuddhabrot { rounds })
+    pub fn antibuddhabrot(&self, rounds: u32, formula: &str) -> Bitmap {
+        // let b = self.buddhabrot_or_antibuddhabrot(FractalType::Antibuddhabrot { rounds }, formula);
+        let st = GPU_STATE.lock().unwrap();
+        let b = render_buddhabrot_gpu(self, formula, rounds, true, st.device.as_ref().unwrap(), st.queue.as_ref().unwrap());
+        b
     }
 }

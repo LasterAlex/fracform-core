@@ -4,10 +4,7 @@
 #![allow(static_mut_refs)]
 #![allow(clippy::borrow_interior_mutable_const)]
 use std::{
-    collections::HashMap,
-    fs,
-    path::{Path, PathBuf},
-    time::Instant,
+    collections::HashMap, fs, path::{Path, PathBuf}, thread, time::Instant
 };
 
 use colors::PaletteMode;
@@ -20,8 +17,7 @@ use rand::distr::{Alphanumeric, SampleString};
 use strfmt::Format;
 
 use crate::{
-    gpu_engine::{ensure_wgpu, GPU_STATE},
-    train::train,
+    config::STACK_SIZE, gpu_engine::{ensure_wgpu, GPU_STATE}, train::train
 };
 
 pub mod colors;
@@ -34,6 +30,7 @@ pub mod gpu_engine;
 pub mod random_formula;
 pub mod train;
 pub mod ui;
+pub mod buddha_gpu;
 
 fn sanitize_filename(name: String) -> String {
     let mut sanitized_formula = name.replace(" ", "").replace("/", "÷").replace("*", "×");
@@ -88,6 +85,7 @@ fn make_fractal<'a>(
             blue_iters,
             color_shift,
             uniform_factor,
+            formula
         )
     } else if let FractalType::Antinebulabrot {
         rounds,
@@ -105,13 +103,14 @@ fn make_fractal<'a>(
             blue_iters,
             color_shift,
             uniform_factor,
+            formula
         )
     } else {
         let fractal_bitmap = match fractal_type {
             FractalType::Mandelbrot => fractal.mandelbrot(formula),
             FractalType::Julia => fractal.julia(formula),
-            FractalType::Buddhabrot { rounds } => fractal.buddhabrot(rounds),
-            FractalType::Antibuddhabrot { rounds } => fractal.antibuddhabrot(rounds),
+            FractalType::Buddhabrot { rounds } => fractal.buddhabrot(rounds, formula),
+            FractalType::Antibuddhabrot { rounds } => fractal.antibuddhabrot(rounds, formula),
             _ => {
                 unreachable!()
             }
@@ -257,7 +256,7 @@ pub fn get_img_dimensions(filename: &str) -> (i32, i32) {
 
 #[allow(dead_code)]
 fn train_fractal() {
-    let train_filename = "pssy.jpg";
+    let train_filename = "heart.png";
 
     let (mut width, mut height) = get_img_dimensions(train_filename);
     // Parameters
@@ -317,11 +316,11 @@ fn run() {
     let center_coordinates = Complex::new(0.0, 0.0);
     let iterations = 1000;
 
-    // let palette_mode = PaletteMode::GrayScale {
-    //     shift: None,
-    //     uniform_factor: Some(0.5),
-    // };
-    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
+    let palette_mode = PaletteMode::GrayScale {
+        shift: None,
+        uniform_factor: Some(0.5),
+    };
+    // let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
     // let palette_mode = PaletteMode::BrownAndBlue;
     // let palette_mode = PaletteMode::Smooth {
     //     shift: Some(50),
@@ -331,7 +330,7 @@ fn run() {
 
     // let formula = &get_random_formula();
     // let formula = "(sinh(asin(z) * z) + (c + real(c) + 0.006) * pow(c + z, c) + (z / (4.01 - z)) * tan(atanh(c)) * (z * z * z * z + c * c) * (c + z - -0.475) + imag(tanh(z))) / pow(1.054, c - z + c - -1.216) + atanh(tan(pow(-0.07, asin(pow(5.004 + -0.635, imag(z))))))";
-    let formula = "z*z/log10(z + c) + c";
+    let formula = "z * z + c";
 
     // let fractal_type = FractalType::Antinebulabrot {
     //     rounds: 100_000_000,
@@ -344,9 +343,9 @@ fn run() {
     // let fractal_type = FractalType::Buddhabrot {
     //     rounds: width * height * 4_u32.pow(2),
     // };
-    // let fractal_type = FractalType::Antibuddhabrot { rounds: 20_000_000 };
+    let fractal_type = FractalType::Antibuddhabrot { rounds: 100_000_000 };
     // let fractal_type = FractalType::Buddhabrot { rounds: 400_000_000 };
-    let fractal_type = FractalType::Mandelbrot;
+    // let fractal_type = FractalType::Mandelbrot;
     // let fractal_type = FractalType::Julia;
     let c = Complex::new(0.0, 0.0); // Important only for Julia sets
     let max_abs = 32;
@@ -359,7 +358,6 @@ fn run() {
         compile_formula_project().expect("Failed to compile Rust code");
     }
     load_library();
-    println!("Library loaded in {:.2?}", start.elapsed());
 
     let mut fractal = Fractal::new(
         width,
@@ -374,6 +372,7 @@ fn run() {
 
     let path = create_file_path(formula);
     make_and_save_fractal(&mut fractal, fractal_type, &path, formula, false);
+    println!("Made fractal in {:.2?}", start.elapsed());
     println!("Saved with name: {}", path.as_path().display());
 }
 

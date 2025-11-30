@@ -10,6 +10,7 @@ impl Fractal {
         blue_iter: u32,
         color_shift: Option<u32>,
         uniform_factor: Option<f64>,
+        formula: &str,
     ) -> Vec<Vec<(u8, u8, u8)>> {
         // I could try to make this more efficient, but honestly,
         // it's not worth it, the difference between nebulabrot and buddhabrot is 1.7x.
@@ -21,18 +22,18 @@ impl Fractal {
         let blue_buddha;
         if is_antinebulabrot {
             self.iterations = red_iter;
-            red_buddha = self.antibuddhabrot(rounds);
+            red_buddha = self.antibuddhabrot(rounds, formula);
             self.iterations = green_iter;
-            green_buddha = self.antibuddhabrot(rounds);
+            green_buddha = self.antibuddhabrot(rounds, formula);
             self.iterations = blue_iter;
-            blue_buddha = self.antibuddhabrot(rounds);
+            blue_buddha = self.antibuddhabrot(rounds, formula);
         } else {
             self.iterations = red_iter;
-            red_buddha = self.buddhabrot(rounds);
+            red_buddha = self.buddhabrot(rounds, formula);
             self.iterations = green_iter;
-            green_buddha = self.buddhabrot(rounds);
+            green_buddha = self.buddhabrot(rounds, formula);
             self.iterations = blue_iter;
-            blue_buddha = self.buddhabrot(rounds);
+            blue_buddha = self.buddhabrot(rounds, formula);
         }
 
         let start = Instant::now();
@@ -105,6 +106,7 @@ impl Fractal {
         blue_iter: u32,
         color_shift: Option<u32>,
         uniform_factor: Option<f64>,
+        formula: &str,
     ) -> Vec<Vec<(u8, u8, u8)>> {
         self.nebulabrot_or_antinebulabrot(
             false,
@@ -114,6 +116,7 @@ impl Fractal {
             blue_iter,
             color_shift,
             uniform_factor,
+            formula,
         )
     }
 
@@ -125,6 +128,7 @@ impl Fractal {
         blue_iter: u32,
         color_shift: Option<u32>,
         uniform_factor: Option<f64>,
+        formula: &str,
     ) -> Vec<Vec<(u8, u8, u8)>> {
         self.nebulabrot_or_antinebulabrot(
             true,
@@ -134,6 +138,7 @@ impl Fractal {
             blue_iter,
             color_shift,
             uniform_factor,
+            formula,
         )
     }
 }

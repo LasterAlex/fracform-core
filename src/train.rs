@@ -161,7 +161,7 @@ pub fn train(filename: &str) -> (String, bool) {
 
     let mut latest_formulas = vec![];
 
-    for _ in 0..20000 {
+    for _ in 0..4000 {
         let formulas = get_multiple_slightly_different_formulas(
             highest_formula.0.clone(),
             &mut latest_formulas,

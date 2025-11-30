@@ -504,12 +504,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "az"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b7e4c2464d97fe331d41de9d5db0def0a96f4d823b8b32a2efd503578988973"
-
-[[package]]
 name = "backtrace"
 version = "0.3.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1422,12 +1416,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "fpdec"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a61bd1ced3d7ec7532b37bf1dd66f420f41fac56fcda10382a048578440915a"
+dependencies = [
+ "fpdec-core",
+ "fpdec-macros",
+]
+
+[[package]]
+name = "fpdec-core"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "483c1ce71dea1c73fb12063055f27690915ffc9999b24bef71eb710513a4d9f1"
+
+[[package]]
+name = "fpdec-macros"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "118368e06ce22d89cb5323740e9d6908c331d4645c330b0b685a80247ff81cd0"
+dependencies = [
+ "fpdec-core",
+ "quote",
+]
+
+[[package]]
 name = "fracform_core"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
  "cached",
  "eframe",
+ "fpdec",
  "futures-intrusive",
  "futures-util",
  "image",
@@ -1439,7 +1460,6 @@ dependencies = [
  "rand_distr",
  "rayon",
  "regex",
- "rug",
  "strfmt",
  "wgpu 0.15.1",
 ]
@@ -1699,16 +1719,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c4ee00b289aba7a9e5306d57c2d05499b2e5dc427f84ac708bd2c090212cf3e"
 dependencies = [
  "gl_generator",
-]
-
-[[package]]
-name = "gmp-mpfr-sys"
-version = "1.6.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60f8970a75c006bb2f8ae79c6768a116dd215fa8346a87aed99bf9d82ca43394"
-dependencies = [
- "libc",
- "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3444,18 +3454,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57397d16646700483b67d2dd6511d79318f9d057fdbd21a4066aeac8b41d310a"
 dependencies = [
  "bytemuck",
-]
-
-[[package]]
-name = "rug"
-version = "1.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58ad2e973fe3c3214251a840a621812a4f40468da814b1a3d6947d433c2af11f"
-dependencies = [
- "az",
- "gmp-mpfr-sys",
- "libc",
- "libm",
 ]
 
 [[package]]

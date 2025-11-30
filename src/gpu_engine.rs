@@ -149,7 +149,7 @@ impl<'a> Lexer<'a> {
 
 /// AST
 #[derive(Debug, Clone)]
-enum Expr {
+pub enum Expr {
     Number(f64),
     Var(String), // "z" or "c"
     UnaryOp {
@@ -167,7 +167,7 @@ enum Expr {
     },
 }
 
-struct Parser<'a> {
+pub struct Parser<'a> {
     lexer: Lexer<'a>,
     cur: Token,
 }
@@ -317,7 +317,8 @@ impl<'a> Parser<'a> {
     fn parse_expr(&mut self) -> Expr {
         self.parse_add_sub()
     }
-    fn parse(s: &'a str) -> Expr {
+
+    pub fn parse(s: &'a str) -> Expr {
         let mut p = Parser::new(s);
         let e = p.parse_expr();
         match p.cur {
@@ -327,7 +328,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn gen_wgsl_expr(expr: &Expr) -> String {
+pub fn gen_wgsl_expr(expr: &Expr) -> String {
     match expr {
         Expr::Number(v) => {
             format!("vec2({:.18}, 0.0)", *v)
