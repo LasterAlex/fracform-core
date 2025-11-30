@@ -5,7 +5,7 @@ use std::{
     time::Instant,
 };
 
-use crate::config::{JOBS, MAX_PIXELS, WRITE_TO_BITMAP_LEN_THRESHOLD};
+use crate::{config::{JOBS, MAX_PIXELS, WRITE_TO_BITMAP_LEN_THRESHOLD}};
 
 use super::*;
 
@@ -154,7 +154,9 @@ impl Fractal {
         // For optimization, we first generate a mandelbrot set, and only then generate the
         // buddhabrot, excluding the points that are in the set (or including them if we want
         // antibuddhabrot).
-        let mandelbrot_bitmap = self.clone().mandelbrot();
+        
+        let mandelbrot_bitmap = self.clone().mandelbrot("z * z + c"); // REPLACE WITH ACTUAL
+        // FORMULA
         let start = Instant::now();
 
         let mut tmp: Vec<Vec<Complex<f64>>> = vec![];

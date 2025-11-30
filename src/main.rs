@@ -7,20 +7,22 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
-    thread,
     time::Instant,
 };
 
 use colors::PaletteMode;
-use config::{ANIMATIONS_DIR, FRACTALS_DIR, GENERATED_DIR, STACK_SIZE};
+use config::{ANIMATIONS_DIR, FRACTALS_DIR, GENERATED_DIR};
 use formula::{compile_formula_project, create_formula_project, load_library};
-use fractals::{f, Fractal, FractalType};
+use fractals::{Fractal, FractalType};
 use image::{imageops, GenericImageView, ImageBuffer, Rgb};
 use num::Complex;
 use rand::distr::{Alphanumeric, SampleString};
 use strfmt::Format;
 
-use crate::{random_formula::get_random_formula, train::train};
+use crate::{
+    gpu_engine::{ensure_wgpu, GPU_STATE},
+    train::train,
+};
 
 pub mod colors;
 pub mod compare_shadows;
@@ -28,10 +30,10 @@ pub mod config;
 pub mod formula;
 pub mod fractals;
 pub mod frames_to_mp4;
+pub mod gpu_engine;
 pub mod random_formula;
 pub mod train;
 pub mod ui;
-pub mod gpu_engine;
 
 fn sanitize_filename(name: String) -> String {
     let mut sanitized_formula = name.replace(" ", "").replace("/", "÷").replace("*", "×");
@@ -65,7 +67,11 @@ fn save_bitmap(bitmap: &[Vec<(u8, u8, u8)>], name: &Path, rotate: bool) {
     image_buffer.save(name).expect("Failed to save image");
 }
 
-fn make_fractal(fractal: &mut Fractal, fractal_type: FractalType) -> Vec<Vec<(u8, u8, u8)>> {
+fn make_fractal<'a>(
+    fractal: &mut Fractal,
+    fractal_type: FractalType,
+    formula: &str,
+) -> Vec<Vec<(u8, u8, u8)>> {
     if let FractalType::Nebulabrot {
         rounds,
         red_iters,
@@ -102,8 +108,8 @@ fn make_fractal(fractal: &mut Fractal, fractal_type: FractalType) -> Vec<Vec<(u8
         )
     } else {
         let fractal_bitmap = match fractal_type {
-            FractalType::Mandelbrot => fractal.mandelbrot(),
-            FractalType::Julia => fractal.julia(),
+            FractalType::Mandelbrot => fractal.mandelbrot(formula),
+            FractalType::Julia => fractal.julia(formula),
             FractalType::Buddhabrot { rounds } => fractal.buddhabrot(rounds),
             FractalType::Antibuddhabrot { rounds } => fractal.antibuddhabrot(rounds),
             _ => {
@@ -118,9 +124,10 @@ fn make_and_save_fractal(
     fractal: &mut Fractal,
     fractal_type: FractalType,
     file_path: &Path,
+    formula: &str,
     rotate: bool,
 ) {
-    let color_bitmap = make_fractal(fractal, fractal_type);
+    let color_bitmap = make_fractal(fractal, fractal_type, formula);
     save_bitmap(&color_bitmap, file_path, rotate);
 }
 
@@ -145,7 +152,7 @@ fn make_animation() {
     // Fractal parameters
     let width = 1000;
     let height = 1000;
-    let zoom = 0.5;
+    // let zoom = 0.5;
     let iterations = 500;
     let max_abs = 32;
     let center_coordinates = Complex::new(-1.6481003600666417, 0.003222726636759382);
@@ -159,7 +166,8 @@ fn make_animation() {
     // };
     // let palette_mode = PaletteMode::Rainbow { offset: None };
     let palette_mode = PaletteMode::Custom;
-    let formula = "sinh(pow(z + z, pow(c, c) / (-4.359 / -3.29) - pow(c * (z + 3.111), 4.533)) + c)";
+    let formula =
+        "sinh(pow(z + z, pow(c, c) / (-4.359 / -3.29) - pow(c * (z + 3.111), 4.533)) + c)";
     let additional_info = "_zoom";
     // let fractal_type = FractalType::Nebulabrot {
     //     rounds: 100_000_000,
@@ -235,7 +243,7 @@ fn make_animation() {
             palette_mode.clone(),
         );
         let file = current_animation_directory.join(format!("{frame}_fractal_animated.png"));
-        make_and_save_fractal(&mut fractal, fractal_type.clone(), &file, false);
+        make_and_save_fractal(&mut fractal, fractal_type.clone(), &file, formula, false);
     }
     println!("Animation took {:.2?}", start.elapsed());
     frames_to_mp4::make_mp4(current_animation_directory.as_path(), fps);
@@ -276,7 +284,6 @@ fn train_fractal() {
     let max_abs = 1280;
 
     // Code
-    let start = Instant::now();
 
     // This exists to make sure that the library is loaded before the formula is generated
     // if create_formula_project(formula).expect("Failed to generate Rust code") {
@@ -297,7 +304,7 @@ fn train_fractal() {
     );
 
     let path = create_file_path(formula);
-    make_and_save_fractal(&mut fractal, fractal_type, &path, *rotate);
+    make_and_save_fractal(&mut fractal, fractal_type, &path, formula, *rotate);
     println!("Saved with name: {}", path.as_path().display());
 }
 
@@ -308,23 +315,23 @@ fn run() {
     let height = 1000;
     let zoom = 0.5;
     let center_coordinates = Complex::new(0.0, 0.0);
-    let iterations = 1000000;
+    let iterations = 1000;
 
     // let palette_mode = PaletteMode::GrayScale {
     //     shift: None,
     //     uniform_factor: Some(0.5),
     // };
-    // let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
+    let palette_mode = PaletteMode::Rainbow { offset: Some(100) };
     // let palette_mode = PaletteMode::BrownAndBlue;
     // let palette_mode = PaletteMode::Smooth {
     //     shift: Some(50),
     //     offset: None,
     // };
-    let palette_mode = PaletteMode::Custom;
+    // let palette_mode = PaletteMode::Custom;
 
     // let formula = &get_random_formula();
     // let formula = "(sinh(asin(z) * z) + (c + real(c) + 0.006) * pow(c + z, c) + (z / (4.01 - z)) * tan(atanh(c)) * (z * z * z * z + c * c) * (c + z - -0.475) + imag(tanh(z))) / pow(1.054, c - z + c - -1.216) + atanh(tan(pow(-0.07, asin(pow(5.004 + -0.635, imag(z))))))";
-    let formula = "cos(z) + c";
+    let formula = "z*z/log10(z + c) + c";
 
     // let fractal_type = FractalType::Antinebulabrot {
     //     rounds: 100_000_000,
@@ -366,11 +373,14 @@ fn run() {
     );
 
     let path = create_file_path(formula);
-    make_and_save_fractal(&mut fractal, fractal_type, &path, false);
+    make_and_save_fractal(&mut fractal, fractal_type, &path, formula, false);
     println!("Saved with name: {}", path.as_path().display());
 }
 
 fn main() {
+    let mut st = GPU_STATE.lock().unwrap();
+    ensure_wgpu(&mut st);
+    drop(st);
     let generated_path = Path::new(GENERATED_DIR);
     let animations_path = generated_path.join(Path::new(ANIMATIONS_DIR));
     let fractals_path = generated_path.join(Path::new(FRACTALS_DIR));
@@ -383,5 +393,6 @@ fn main() {
     //
     // // Wait for thread to join
     // child.join().unwrap();
+
     ui::run_app();
 }

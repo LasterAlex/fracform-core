@@ -1,9 +1,8 @@
 use rayon::prelude::*;
-use std::time::Instant;
 
 use crate::{
     config::{JOBS, MAX_PIXELS},
-    gpu_engine::{self, ensure_wgpu, GPU_STATE},
+    gpu_engine::{self, GPU_STATE},
 };
 
 use super::*;
@@ -52,7 +51,6 @@ impl Fractal {
                 pixels.push((x, y));
             }
         }
-        let start = Instant::now();
 
         let jobs_lock = *JOBS.lock().unwrap();
         if jobs_lock == 1 {
@@ -98,25 +96,23 @@ impl Fractal {
         bitmap
     }
 
-    pub fn mandelbrot(&self) -> Bitmap {
+    pub fn mandelbrot<'a>(
+        &self,
+        formula: &str,
+    ) -> Bitmap {
         // let b = self.mandelbrot_or_julia(FractalType::Mandelbrot);
-        let formula = "z * z + c";
-        let mut st = GPU_STATE.lock().unwrap();
-        let (device, queue) = ensure_wgpu(&mut st);
-        let start = Instant::now();
-        let b = gpu_engine::render_mandelbrot(self, formula, device, queue);
-        dbg!(start.elapsed());
+        let st = GPU_STATE.lock().unwrap();
+        let b = gpu_engine::render_mandelbrot(self, formula, st.device.as_ref().unwrap(), st.queue.as_ref().unwrap());
         b
     }
 
-    pub fn julia(&self) -> Bitmap {
+    pub fn julia<'a>(
+        &self,
+        formula: &str,
+    ) -> Bitmap {
         // let b = self.mandelbrot_or_julia(FractalType::Julia);
-        let formula = "z * z + c";
-        let mut st = GPU_STATE.lock().unwrap();
-        let (device, queue) = ensure_wgpu(&mut st);
-        let start = Instant::now();
-        let b = gpu_engine::render_julia(self, formula, device, queue);
-        dbg!(start.elapsed());
+        let st = GPU_STATE.lock().unwrap();
+        let b = gpu_engine::render_julia(self, formula, st.device.as_ref().unwrap(), st.queue.as_ref().unwrap());
         b
     }
 }

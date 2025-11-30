@@ -174,7 +174,8 @@ impl Fractal {
         c: Option<Complex<f64>>,
         palette_mode: PaletteMode,
     ) -> Fractal {
-        if width * height > MAX_PIXELS.try_into().unwrap() {
+        let max_pixels: usize = MAX_PIXELS.try_into().unwrap();
+        if (width as usize) * (height as usize) > max_pixels {
             panic!("Too many pixels, increase MAX_PIXELS and STACK_SIZE in config.rs");
         }
         Fractal {
@@ -224,7 +225,7 @@ impl Fractal {
         for x in 0..self.width as usize {
             for y in 0..self.height as usize {
                 let i = bitmap[x * self.height as usize + y];
-                color_bitmap[y][x] = set_color(i, max_param, self.palette_mode.clone());
+                color_bitmap[x][y] = set_color(i, max_param, self.palette_mode.clone());
             }
         }
         // let elapsed = start.elapsed();

@@ -42,7 +42,7 @@ pub fn get_formula_score(expr_formula: Expr, img: &Vec<Vec<bool>>) -> f64 {
         palette_mode,
     );
 
-    let fractal_bitmap = make_fractal(&mut fractal, fractal_type);
+    let fractal_bitmap = make_fractal(&mut fractal, fractal_type, &formula);
 
     if is_bitmap_uniform(&fractal_bitmap) {
         return 0.0;

@@ -5,7 +5,9 @@ use rand::{seq::IndexedRandom, Rng};
 use rand_distr::{Distribution, Normal};
 
 use crate::{
-    compare_shadows::is_bitmap_uniform, config::STACK_SIZE, formula::{compile_formula_project, create_formula_project, load_library}, fractals::Fractal, make_fractal
+    config::STACK_SIZE,
+    fractals::Fractal,
+    make_fractal,
 };
 
 pub fn from_func_notation(expr: Expr) -> String {
@@ -485,11 +487,13 @@ fn has_z_and_c(expr: Expr, has_z: bool, has_c: bool) -> (bool, bool) {
     }
 }
 
-fn check_is_fractal_monotone(formula: String) -> bool {
-    if create_formula_project(&formula).expect("Failed to generate Rust code") {
-        compile_formula_project().expect("Failed to compile Rust code");
-    }
-    load_library();
+fn check_is_fractal_monotone(
+    formula: String,
+) -> bool {
+    // if create_formula_project(&formula).expect("Failed to generate Rust code") {
+    //     compile_formula_project().expect("Failed to compile Rust code");
+    // }
+    // load_library();
     let mut fractal = Fractal::new(
         50,
         50,
@@ -502,7 +506,13 @@ fn check_is_fractal_monotone(formula: String) -> bool {
     );
     let child = thread::Builder::new()
         .stack_size(STACK_SIZE)
-        .spawn(move || make_fractal(&mut fractal, crate::fractals::FractalType::Mandelbrot))
+        .spawn(move || {
+            make_fractal(
+                &mut fractal,
+                crate::fractals::FractalType::Mandelbrot,
+                &formula,
+            )
+        })
         .unwrap();
 
     let bitmap = child.join().unwrap();

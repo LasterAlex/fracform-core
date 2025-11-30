@@ -236,6 +236,7 @@ impl FracformApp {
         let params = self.params.clone();
         let fractal_type = self.fractal_type.clone();
         let palette = self.palette.clone();
+        let formula = self.formula.clone();
 
         self.compile_formula_if_needed();
 
@@ -252,7 +253,7 @@ impl FracformApp {
                     Some(Complex::new(params.cx, params.cy)),
                     palette,
                 );
-                let bitmap = make_fractal(&mut fractal, fractal_type);
+                let bitmap = make_fractal(&mut fractal, fractal_type, &formula);
                 let _ = tx.send(bitmap);
             })
             .unwrap();
@@ -272,6 +273,7 @@ impl FracformApp {
 
         let params = self.mini_julia.params.clone();
         let palette = self.palette.clone();
+        let formula = self.formula.clone();
 
         self.compile_formula_if_needed();
 
@@ -288,7 +290,7 @@ impl FracformApp {
                     Some(Complex::new(params.cx, params.cy)),
                     palette,
                 );
-                let bitmap = make_fractal(&mut fractal, FractalType::Julia);
+                let bitmap = make_fractal(&mut fractal, FractalType::Julia, &formula);
                 let _ = tx.send(bitmap);
             })
             .unwrap();
